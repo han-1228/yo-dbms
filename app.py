@@ -1,145 +1,100 @@
-import os
-from dotenv import load_dotenv
-
-# 告訴 Python 不要去找預設的 .env，去抓我的 data.env！
-load_dotenv('data.env')
-
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import mysql.connector
-from mysql.connector import Error
+import sqlite3  # 如果你們使用 PostgreSQL，請換成 psycopg2；MySQL 換成 pymysql
 
 app = Flask(__name__)
-CORS(app) 
 
-app.json.ensure_ascii = False
+# 【核心設定】這一行超級重要！允許 Netlify 的前端網址跨網域連線到 Render
+CORS(app)
 
-# ==========================================
-# 資料庫連線設定
-# ==========================================
-db_config = {
-    'host': 'mysql-1af924e-yo-dbms.i.aivencloud.com',
-    'port': 25889,
-    'user': 'avnadmin',
-    
-    # 🌟 3. 安全地改回這個寫法，現在它一定讀得到了！
-    'password': os.environ.get('DB_PASSWORD'), 
-    
-    'database': 'schoolsystemdb',               
-    'ssl_ca': 'ca.pem'                          
-}
+# 請更換成你們實際的資料庫檔案名稱路徑
+DB_FILE = 'database.db' 
 
 def get_db_connection():
-    try:
-        conn = mysql.connector.connect(**db_config)
-        return conn
-    except Error as e:
-        print(f"資料庫連線失敗: {e}")
-        return None
+    """建立資料庫連線的輔助函式"""
+    conn = sqlite3.connect(DB_FILE)
+    # 讓撈出來的資料可以用欄位名稱（如 row['name']）直接存取，方便轉成 JSON
+    conn.row_factory = sqlite3.Row 
+    return conn
 
 
 # ==========================================
-# 喚醒路由 (專留給 UptimeRobot 戳門用)
+# 功能一：獲取學生列表 (GET) - 供測試連線與載入使用
 # ==========================================
-@app.route('/keep-alive', methods=['GET'])
-def keep_alive():
-    return jsonify({"status": "alive", "message": "Server is awake!"}), 200
-
-
-# ==========================================
-# API 路由區塊 (前後端資料交換中心)
-# ==========================================
-
-# 1. 測試與讀取用：撈取所有學生資料 (GET) -> 【這就是原本的步驟二！】
 @app.route('/api/students', methods=['GET'])
-def get_all_students():
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"status": "error", "message": "資料庫連線失敗"}), 500
-
+def get_students():
     try:
-        cursor = conn.cursor(dictionary=True) # dictionary=True 讓回傳結果自動變成 JSON 格式
-        cursor.execute("SELECT * FROM Students")
-        students = cursor.fetchall()
-        
-        cursor.close()
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM students")
+        rows = cursor.fetchall()
         conn.close()
+
+        # 將資料庫的資料轉換成前端看得懂的 List[dict] 格式
+        students = [dict(row) for row in rows]
         return jsonify(students), 200
-    except Error as e:
-        return jsonify({"status": "error", "message": f"查詢失敗: {e}"}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
-# 2. 接收前端傳來的資料，新增學生 (POST)
+# ==========================================
+# 功能二：手動新增學生 (POST) - 接收前端表單資料
+# ==========================================
 @app.route('/api/students', methods=['POST'])
 def add_student():
-    data = request.json 
-    
-    # 驗證前端傳來的 JSON 欄位（配合前端組員的習慣，這裡維持大寫）
-    if not data or 'STUDENTID' not in data or 'STUDENTNAME' not in data:
-        return jsonify({"status": "error", "message": "缺少必要欄位 (學號或姓名)"}), 400
-
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"status": "error", "message": "資料庫連線失敗"}), 500
-
     try:
+        # 接收前端傳過來的 JSON 資料
+        data = request.get_json()
+        student_id = data.get('student_id')
+        name = data.get('name')
+        email = data.get('email')
+
+        # 防呆機制：檢查欄位是否齊全
+        if not student_id or not name or not email:
+            return jsonify({"error": "請填寫所有必要欄位"}), 400
+
+        # 連接資料庫並執行 INSERT INTO 指令
+        conn = get_db_connection()
         cursor = conn.cursor()
-        # 🌟 這裡已將欄位修改為與 Aiven 資料庫一致的 STU_ID, STU_NAME, CLASS_NAME, SEAT_NUM
-        sql = """
-            INSERT INTO Students (STU_ID, STU_NAME, CLASS_NAME, SEAT_NUM) 
-            VALUES (%s, %s, %s, %s)
-        """
-        values = (
-            data['STUDENTID'], 
-            data['STUDENTNAME'], 
-            data.get('CLASSNAME'), 
-            data.get('SEATNUMBER')
+        cursor.execute(
+            "INSERT INTO students (student_id, name, email) VALUES (?, ?, ?)",
+            (student_id, name, email)
         )
-        
-        cursor.execute(sql, values)
-        conn.commit() # 真正寫入雲端
-        
-        cursor.close()
+        conn.commit()  # 確認寫入資料庫
         conn.close()
-        return jsonify({"status": "success", "message": f"成功新增學生：{data['STUDENTNAME']}"}), 201
-    except Error as e:
-        return jsonify({"status": "error", "message": f"資料庫寫入失敗: {e}"}), 400
+
+        return jsonify({"message": "學生資料已成功寫入資料庫！"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
-# 3. 接收前端傳來的資料，新增成績 (POST)
-@app.route('/api/scores', methods=['POST'])
-def add_score():
-    data = request.json
-    
-    if not data or not all(k in data for k in ['SCOREID', 'STUDENTID', 'ASSESSMENTID', 'SCORE']):
-        return jsonify({"status": "error", "message": "欄位不完整"}), 400
-
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"status": "error", "message": "資料庫連線失敗"}), 500
-
+# ==========================================
+# 功能三：查詢學生總成績排名 (GET) - 關聯式資料庫查詢
+# ==========================================
+@app.route('/api/scores', methods=['GET'])
+def get_scores_ranking():
     try:
+        conn = get_db_connection()
         cursor = conn.cursor()
-        # 🌟 這裡已將欄位修改為與 Aiven 資料庫一致的 SCORE_ID, STU_ID, AST_ID, SCORE
-        sql = """
-            INSERT INTO Scores (SCORE_ID, STU_ID, AST_ID, SCORE) 
-            VALUES (%s, %s, %s, %s)
+        
+        # 這裡寫一個 JOIN 語法，把學生表和成績表串聯，並用成績由高到低排序 (DESC)
+        # 【注意】請根據你們 yo-dbms.sql 實際的資料表與欄位名稱修改此處的 SQL 語法
+        query = """
+            SELECT s.student_id, s.name, sc.score 
+            FROM students s
+            JOIN scores sc ON s.student_id = sc.student_id
+            ORDER BY sc.score DESC
         """
-        values = (data['SCOREID'], data['STUDENTID'], data['ASSESSMENTID'], data['SCORE'])
-        
-        cursor.execute(sql, values)
-        conn.commit()
-        
-        cursor.close()
+        cursor.execute(query)
+        rows = cursor.fetchall()
         conn.close()
-        return jsonify({"status": "success", "message": "成績新增成功！"}), 201
-    except Error as e:
-        return jsonify({"status": "error", "message": f"新增失敗 (請檢查學號或評量代碼是否存在): {e}"}), 400
+
+        rankings = [dict(row) for row in rows]
+        return jsonify(rankings), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
-# ==========================================
-# 啟動 Flask 伺服器 (必須放在程式碼的最底部)
-# ==========================================
 if __name__ == '__main__':
-    # 這裡將 port 改為 5001。等之後部署到 Render 時，Render 會自動幫你注入正確的外部 Port
-    app.run(debug=True, port=5001)
+    # 啟動伺服器，在本機測試時會運行在 http://127.0.0.1:5000
+    app.run(debug=True, port=5000)
