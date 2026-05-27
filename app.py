@@ -84,3 +84,8 @@ def get_scores_ranking():
         rankings = [dict(row) for row in rows]
         return jsonify(rankings), 200
     except Exception as e:
+        # 這裡補上了剛剛被截斷的部分！
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
