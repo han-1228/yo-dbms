@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學生資訊系統</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            color: #333;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #eee;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>👨‍🎓 學生資訊系統前端測試</h1>
+
+    <div class="container">
+        <h2>1. 測試 API 連線狀態</h2>
+        <button onclick="testConnection()">檢查伺服器連線</button>
+        <p><strong>伺服器回應：</strong></p>
+        <pre id="connectionResult">等待測試...</pre>
+    </div>
+
+    <div class="container">
+        <h2>2. 查詢學生年度成績排名</h2>
+        <button onclick="fetchRankings()">取得排名資料</button>
+        <p><strong>排名資料 (JSON 格式)：</strong></p>
+        <pre id="rankingsResult">等待查詢...</pre>
+    </div>
+
+    <script>
+        // 設定您的 API 基礎網址 (記得對應到剛剛成功啟動的 port，例如 5001)
+        const BASE_URL = 'https://db-0dyb.onrender.com';
+
+        // 1. 測試連線的函式
+        async function testConnection() {
+            const resultBox = document.getElementById('connectionResult');
+            resultBox.textContent = '連線中...';
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/test_connection`);
+                const data = await response.json();
+                // 將 JSON 資料轉為排版過後的字串顯示
+                resultBox.textContent = JSON.stringify(data, null, 4);
+            } catch (error) {
+                console.error('連線錯誤:', error);
+                resultBox.textContent = '❌ 無法連線到伺服器。請確認 Flask 伺服器是否正在執行，並且 Port 正確。';
+            }
+        }
+
+        // 2. 取得排名資料的函式
+        async function fetchRankings() {
+            const resultBox = document.getElementById('rankingsResult');
+            resultBox.textContent = '查詢中...';
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/rankings`);
+                const data = await response.json();
+                resultBox.textContent = JSON.stringify(data, null, 4);
+            } catch (error) {
+                console.error('查詢錯誤:', error);
+                resultBox.textContent = '❌ 查詢失敗，請檢查 API 與資料庫狀態。';
+            }
+        }
+    </script>
+
+</body>
+</html>
