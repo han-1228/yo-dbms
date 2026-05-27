@@ -3,25 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DBMS 專案展示 - 純前端 CSV 版</title>
+  <title>DBMS 專案展示 - 正規後端版</title>
   <style>
     /* === 核心配色與全域設定 === */
-    :root {
-      --mint-bg: #e2f1ed;
-      --dark-teal: #0d3b41;
-      --white: #ffffff;
-      --light-gray: #f5f7f6;
-    }
+    :root { --mint-bg: #e2f1ed; --dark-teal: #0d3b41; --white: #ffffff; --light-gray: #f5f7f6; }
     html { scroll-behavior: smooth; }
-    body {
-      margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--mint-bg); color: var(--dark-teal);
-    }
-    header {
-      display: flex; justify-content: space-between; padding: 15px 50px;
-      align-items: center; background-color: rgba(226, 241, 237, 0.95);
-      position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }
+    body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--mint-bg); color: var(--dark-teal); }
+    header { display: flex; justify-content: space-between; padding: 15px 50px; align-items: center; background-color: rgba(226, 241, 237, 0.95); position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
     .logo { font-size: 24px; font-weight: bold; }
     nav { display: flex; gap: 20px; }
     nav a { text-decoration: none; color: var(--dark-teal); font-weight: bold; padding: 8px 15px; border-radius: 20px; transition: background 0.3s; }
@@ -29,6 +17,196 @@
     .btn { background-color: var(--dark-teal); color: var(--white); padding: 12px 25px; border: none; border-radius: 25px; font-size: 16px; cursor: pointer; transition: background-color 0.3s; }
     .btn:hover { background-color: #16565f; }
 
-    /* === 區塊 1 === */
     #section-connect { position: relative; height: 500px; overflow: hidden; }
-    .hero-image-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image
+    .hero-image-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url('https://images.unsplash.com/photo-1580582932707-520aed937b7b?q=80&w=1500&auto=format&fit=crop'); background-size: cover; background-position: center; }
+    .hero-overlay-card { background-color: rgba(255, 255, 255, 0.95); border-radius: 30px; padding: 40px; max-width: 500px; text-align: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+    .status-dot { display: inline-block; width: 12px; height: 12px; background-color: gray; border-radius: 50%; margin-right: 8px; }
+
+    #section-ranking { background-color: var(--white); padding: 80px 50px; min-height: 400px; }
+    .section-title { text-align: center; font-size: 32px; margin-bottom: 40px; }
+    .ranking-table { width: 100%; max-width: 800px; margin: 0 auto; border-collapse: collapse; background-color: var(--light-gray); border-radius: 15px; overflow: hidden; }
+    .ranking-table th, .ranking-table td { padding: 15px; text-align: center; border-bottom: 1px solid #e0e0e0; }
+    .ranking-table th { background-color: var(--dark-teal); color: var(--white); }
+
+    #section-upload { background-color: var(--mint-bg); padding: 80px 50px; min-height: 500px; }
+    .forms-wrapper { display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; max-width: 1000px; margin: 0 auto; }
+    .form-card { background-color: var(--white); padding: 40px; border-radius: 20px; flex: 1; min-width: 300px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); text-align: center; }
+    .file-drop-area { border: 2px dashed #2a9d8f; border-radius: 15px; padding: 40px 20px; background-color: #f9fbfb; margin-bottom: 20px; cursor: pointer; transition: background 0.3s; }
+    .file-drop-area:hover { background-color: #e2f1ed; }
+    .input-group { margin-bottom: 15px; text-align: left; }
+    .input-group input { width: 90%; padding: 12px; border: 1px solid #ccc; border-radius: 10px; font-size: 16px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">✦ DBMS 系統</div>
+    <nav>
+      <a href="#section-connect">1. 連線狀態</a>
+      <a href="#section-ranking">2. 成績排名</a>
+      <a href="#section-upload">3. 新增資料</a>
+    </nav>
+  </header>
+
+  <section id="section-connect">
+    <div class="hero-image-container"></div>
+    <div class="hero-overlay-card">
+      <h1>資料庫連線中心</h1>
+      <p>Render 免費主機可能會休眠，請先點擊下方按鈕測試並喚醒伺服器連線。</p>
+      <h3 id="connection-status"><span class="status-dot"></span>尚未連線</h3>
+      <button class="btn" onclick="testConnection()">⚡ 測試連線並喚醒</button>
+    </div>
+  </section>
+
+  <section id="section-ranking">
+    <h2 class="section-title">🏆 學生總成績排名</h2>
+    <div style="text-align: center; margin-bottom: 30px;">
+      <button class="btn" onclick="fetchRankings()">🔍 查詢最新排名</button>
+    </div>
+    
+    <table class="ranking-table" id="rankingTable">
+      <thead>
+        <tr>
+          <th>名次</th>
+          <th>學號</th>
+          <th>姓名</th>
+          <th>總成績</th>
+        </tr>
+      </thead>
+      <tbody id="ranking-body">
+        <tr>
+          <td colspan="4">請點擊上方按鈕查詢成績...</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="section-upload">
+    <h2 class="section-title">📁 系統資料擴充 (寫入資料庫)</h2>
+    
+    <div class="forms-wrapper">
+      <div class="form-card">
+        <h3>📤 批次上傳 (CSV 檔)</h3>
+        <p>將學生成績或課程名單直接上傳匯入資料庫</p>
+        <div class="file-drop-area" onclick="document.getElementById('fileInput').click()">
+          <h1 style="margin:0; color:#2a9d8f;">📄</h1>
+          <p>點擊選擇檔案，或將檔案拖曳至此</p>
+          <input type="file" id="fileInput" accept=".csv" style="display: none;" onchange="handleFileUpload(event)">
+        </div>
+        <p id="fileNameDisplay" style="color: gray; font-size: 14px;"></p>
+        <button class="btn" style="width:100%;" onclick="submitFile()">開始匯入檔案</button>
+      </div>
+
+      <div class="form-card">
+        <h3>➕ 手動新增學生</h3>
+        <form id="addStudentForm" onsubmit="addSingleStudent(event)">
+          <div class="input-group">
+            <input type="text" id="new_id" placeholder="學號 (例: S101)" required>
+          </div>
+          <div class="input-group">
+            <input type="text" id="new_name" placeholder="姓名 (例: 王小明)" required>
+          </div>
+          <div class="input-group">
+            <input type="email" id="new_email" placeholder="Email" required>
+          </div>
+          <button type="submit" class="btn" style="width:100%;">寫入資料庫</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // 這裡指回你的 Render 後端 API！
+    const baseUrl = 'https://yo-dbms.onrender.com/api';
+
+    function testConnection() {
+      const statusText = document.getElementById('connection-status');
+      statusText.innerHTML = '<span class="status-dot" style="background-color: orange;"></span>正在連線喚醒中... (需 30-50 秒)';
+      
+      fetch(`${baseUrl}/students`)
+        .then(response => {
+          if(response.ok) {
+            statusText.innerHTML = '<span class="status-dot" style="background-color: #2a9d8f;"></span>✅ 連線成功！伺服器運作中';
+          } else {
+            throw new Error('伺服器錯誤');
+          }
+        })
+        .catch(err => {
+          statusText.innerHTML = '<span class="status-dot" style="background-color: red;"></span>❌ 連線失敗，請檢查 Render 狀態';
+        });
+    }
+
+    function fetchRankings() {
+      const tbody = document.getElementById('ranking-body');
+      tbody.innerHTML = '<tr><td colspan="4">資料庫撈取中...</td></tr>';
+
+      fetch(`${baseUrl}/scores`)
+        .then(response => {
+           if(!response.ok) throw new Error('API尚未建立或發生錯誤');
+           return response.json();
+        })
+        .then(data => {
+          tbody.innerHTML = '';
+          if(data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4">目前沒有成績資料</td></tr>';
+            return;
+          }
+          data.forEach((item, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>👑 ${index + 1}</td>
+              <td>${item.student_id || '未知'}</td>
+              <td>${item.name || '未知'}</td>
+              <td style="font-weight:bold; color:#2a9d8f;">${item.score || item.total_score || 'N/A'}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        })
+        .catch(err => {
+          tbody.innerHTML = `<tr><td colspan="4" style="color:red;">❌ 無法取得排名，可能是後端 app.py 還沒寫對喔！</td></tr>`;
+        });
+    }
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        document.getElementById('fileNameDisplay').innerText = `已選擇檔案: ${file.name}`;
+      }
+    }
+
+    function submitFile() {
+      const fileInput = document.getElementById('fileInput');
+      if (!fileInput.files.length) {
+        alert("請先選擇一個 CSV 檔案！");
+        return;
+      }
+      alert("⚠️ 前端已準備好檔案！等後端 (app.py) 寫好接收 API 就能存進資料庫了。");
+    }
+
+    function addSingleStudent(event) {
+      event.preventDefault();
+      
+      const newStudent = {
+        student_id: document.getElementById('new_id').value,
+        name: document.getElementById('new_name').value,
+        email: document.getElementById('new_email').value
+      };
+
+      fetch(`${baseUrl}/students`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newStudent)
+      })
+      .then(response => {
+        if (response.ok) {
+          alert('✅ 成功寫入資料庫！');
+          document.getElementById('addStudentForm').reset();
+        } else {
+          alert('❌ 新增失敗，後端可能發生錯誤。');
+        }
+      })
+      .catch(error => alert('❌ 連線發生錯誤！'));
+    }
+  </script>
+</body>
+</html>
