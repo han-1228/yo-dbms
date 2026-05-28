@@ -14,13 +14,13 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row 
     return conn
 
-
 def init_db_from_csv():
     if os.path.exists(DB_FILE):
         os.remove(DB_FILE)
         
     conn = get_db_connection()
     cursor = conn.cursor()
+    
     cursor.executescript("""
         CREATE TABLE IF NOT EXISTS Students (
             STU_ID VARCHAR(10) PRIMARY KEY, STU_NAME VARCHAR(50), CLASS_NAME VARCHAR(20), SEAT_NUM INT
@@ -50,49 +50,38 @@ def init_db_from_csv():
         );
     """)
     
-    # 2. 自動讀取對應的 CSV 並塞入資料表
     files_to_import = {
-        '1.students.csv': "INSERT OR IGNORE INTO Students VALUES (?, ?, ?, ?)",
-        '2.courses.csv': "INSERT OR IGNORE INTO Courses VALUES (?, ?, ?)",
-        '3.enrollments.csv': "INSERT OR IGNORE INTO Enrollments VALUES (?, ?)",
-        '4.assessments.csv': "INSERT OR IGNORE INTO Assessments VALUES (?, ?, ?, ?, ?)",
-        '5.scores.csv': "INSERT OR IGNORE INTO Scores VALUES (?, ?, ?, ?)",
-        '6.portfolios.csv': "INSERT OR IGNORE INTO Portfolios VALUES (?, ?, ?, ?, ?, ?)"
+        'students.csv': "INSERT OR IGNORE INTO Students VALUES (?, ?, ?, ?)",
+        'courses.csv': "INSERT OR IGNORE INTO Courses VALUES (?, ?, ?)",
+        'enrollments.csv': "INSERT OR IGNORE INTO Enrollments VALUES (?, ?)",
+        'assessments.csv': "INSERT OR IGNORE INTO Assessments VALUES (?, ?, ?, ?, ?)",
+        'scores.csv': "INSERT OR IGNORE INTO Scores VALUES (?, ?, ?, ?)",
+        'portfolios.csv': "INSERT OR IGNORE INTO Portfolios VALUES (?, ?, ?, ?, ?, ?)"
     }
 
     for filename, query in files_to_import.items():
         if os.path.exists(filename):
-            # 使用 utf-8-sig 避免 Windows CSV 產生的 BOM 亂碼
             with open(filename, 'r', encoding='utf-8-sig') as f:
                 reader = csv.reader(f)
-                next(reader, None) # 跳過標題列
+                next(reader, None)
                 for row in reader:
-                    if row: # 確保不是空行
+                    if row:
                         try:
-                            # 取 row 的前 N 個元素，N 由 query 裡面的問號數量決定
                             param_count = query.count('?')
                             cursor.execute(query, row[:param_count])
                         except Exception as e:
-                            print(f"寫入 {filename} 時略過一筆錯誤資料: {e}")
+                            print(f"寫入 {filename} 時略過錯誤: {e}")
 
     conn.commit()
     conn.close()
     print("🎉 資料庫及 6 張表格全數建立並匯入完成！")
 
-# 開機自動執行建庫腳本
 init_db_from_csv()
 
-
-# ==========================================
-# 網頁要求的 API 接口 (SQL JOIN 實作)
-# ==========================================
-
-# [系統狀態 API]
 @app.route('/', methods=['GET'])
 def home():
     return jsonify({"message": "API 伺服器正常運作中！"}), 200
 
-# [全校學生名單 API]
 @app.route('/api/students', methods=['GET'])
 def get_students():
     try:
@@ -103,7 +92,6 @@ def get_students():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# [全校開課清單 API]
 @app.route('/api/courses', methods=['GET'])
 def get_courses():
     try:
@@ -114,7 +102,6 @@ def get_courses():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# [特定課程 API 1：修課名單 (JOIN Enrollments & Students)]
 @app.route('/api/course/<course_id>/roster', methods=['GET'])
 def get_course_roster(course_id):
     try:
@@ -131,7 +118,6 @@ def get_course_roster(course_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# [特定課程 API 2：學生成績 (JOIN Scores, Students & Assessments)]
 @app.route('/api/course/<course_id>/scores', methods=['GET'])
 def get_course_scores(course_id):
     try:
@@ -149,7 +135,6 @@ def get_course_scores(course_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# [特定課程 API 3：作品集 (JOIN Portfolios & Students)]
 @app.route('/api/course/<course_id>/portfolios', methods=['GET'])
 def get_course_portfolios(course_id):
     try:
