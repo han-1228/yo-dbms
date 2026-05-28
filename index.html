@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>NYCU 校務行政管理系統 - 優雅美妝風</title>
+  <title>校務行政管理系統</title>
   
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
   
@@ -101,6 +101,29 @@
 
     .view-section.active { display: block; animation: fadeIn 0.4s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+    
+    
+    #view-home {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 60vh;
+      background-color: transparent;
+      box-shadow: none;
+    }
+
+    .cute-illustration {
+      width: 100%;
+      max-width: 450px;
+      
+      animation: float 6s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+      100% { transform: translateY(0px); }
+    }
     
     h2 { 
       font-family: 'Playfair Display', "Songti TC", serif;
@@ -226,92 +249,6 @@
     }
     .link-style:hover { color: var(--primary-hover); }
 
-    /* ==========================================
-       首頁：唯美插畫與雜誌風排版專區 
-       ========================================== */
-    .home-layout {
-      display: flex;
-      align-items: center;
-      gap: 40px;
-      margin-top: 10px;
-    }
-    
-    .home-text-section {
-      flex: 1.2;
-    }
-    
-    .home-illustration-section {
-      flex: 0.8;
-      position: relative;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    /* 有機水滴形狀遮罩的插畫 */
-    .aesthetic-img {
-      width: 100%;
-      max-width: 300px;
-      height: 380px;
-      object-fit: cover;
-      /* 這個 borderRadius 會產生自然的不規則形狀 */
-      border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; 
-      box-shadow: 15px 15px 35px rgba(196, 138, 126, 0.2);
-      animation: morph 8s ease-in-out infinite;
-    }
-    
-    /* 讓形狀微微呼吸變動的動畫 */
-    @keyframes morph {
-      0% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
-      50% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
-      100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
-    }
-
-    /* 插畫背後的裝飾圓點 */
-    .bg-blob {
-      position: absolute;
-      width: 250px;
-      height: 250px;
-      background-color: #f2e9e7;
-      border-radius: 50%;
-      z-index: -1;
-      right: -20px;
-      bottom: 20px;
-    }
-
-    .welcome-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 42px;
-      color: var(--primary);
-      margin-bottom: 15px;
-      margin-top: 0;
-    }
-
-    .welcome-text {
-      color: var(--text-muted);
-      line-height: 1.8;
-      font-size: 15px;
-      margin-bottom: 35px;
-    }
-
-    .status-box {
-      background-color: var(--bg-card);
-      border-left: 4px solid var(--primary);
-      padding: 20px 25px;
-      border-radius: 0 8px 8px 0;
-    }
-    .status-box h4 {
-      margin: 0 0 8px 0;
-      font-family: 'Playfair Display', serif;
-      color: var(--text-main);
-      font-size: 18px;
-    }
-    .status-box p {
-      margin: 0;
-      color: var(--primary);
-      font-weight: 700;
-      font-size: 14px;
-    }
   </style>
 </head>
 <body>
@@ -319,7 +256,7 @@
   <aside class="sidebar-left">
     <div class="sys-title">
       校務系統
-      <span class="sys-subtitle">NYCU Administration</span>
+      <span class="sys-subtitle">School Administration</span>
     </div>
     
     <button class="nav-btn active" id="btn-home" onclick="switchMainView('home', this)">Home / 首頁</button>
@@ -330,22 +267,7 @@
   <main class="main-content">
     
     <div id="view-home" class="view-section active">
-      <div class="home-layout">
-        <div class="home-text-section">
-          <h1 class="welcome-title">Welcome.</h1>
-          <p class="welcome-text">歡迎來到 NYCU 校務行政管理系統。<br>我們為您打造了最優雅、流暢的管理體驗，請透過左側選單進行各項業務導航，輕鬆管理您的課程與名單。</p>
-          
-          <div class="status-box">
-            <h4>System Status</h4>
-            <p id="connection-status">正在連線至伺服器...</p>
-          </div>
-        </div>
-        
-        <div class="home-illustration-section">
-          <div class="bg-blob"></div>
-          <img src="https://images.unsplash.com/photo-1507290439931-a861b5a38200?auto=format&fit=crop&q=80&w=600" alt="Aesthetic Floral Illustration" class="aesthetic-img">
-        </div>
-      </div>
+      <img src="https://images.unsplash.com/photo-1610484826967-09c5720778c7?auto=format&fit=crop&w=800&q=80" alt="Cute School Illustration" class="cute-illustration" style="border-radius: 20px; box-shadow: 0 15px 35px rgba(196, 138, 126, 0.15);">
     </div>
 
     <div id="view-students" class="view-section">
@@ -414,7 +336,7 @@
   </main>
 
   <script>
-    // 💡 確保這裡是你的 Render API 網址
+    
     const baseUrl = 'https://db-vh7z.onrender.com/api';
     let currentCourseId = '';
 
@@ -474,11 +396,9 @@
         .catch(() => tbody.innerHTML = '<tr><td colspan="6" style="color:#c48a7e; text-align: center; padding: 20px;">資料讀取失敗，請確認後端已更新</td></tr>');
     }
 
-    // 系統啟動測試
+  
     window.onload = () => {
-      fetch(`${baseUrl}/`)
-        .then(res => res.ok ? document.getElementById('connection-status').innerHTML = '✅ System Online (Connected to Server)' : throwError())
-        .catch(() => document.getElementById('connection-status').innerHTML = '❌ System Offline (Connection Failed)');
+      fetch(`${baseUrl}/`).catch(err => console.log("Render server warming up..."));
     };
 
     function fetchStudentsFromAPI() {
