@@ -38,7 +38,6 @@
       z-index: 10;
     }
     
-    
     .sys-title { 
       font-family: 'Playfair Display', "Songti TC", "Noto Serif TC", serif; 
       font-size: 26px; 
@@ -84,10 +83,11 @@
       padding-left: 20px;
     }
 
-    /* === 右側主內容區 === */
+    
     .main-content { 
       flex: 1; padding: 50px 60px; overflow-y: auto; 
     }
+    
     
     .view-section { 
       display: none; 
@@ -107,16 +107,20 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 60vh;
-      background-color: transparent;
+      min-height: 70vh;
+      background-color: transparent; 
       box-shadow: none;
     }
 
-    .cute-illustration {
+    
+    .classroom-img {
       width: 100%;
-      max-width: 450px;
-      
-      animation: float 6s ease-in-out infinite;
+      max-width: 580px; 
+      height: auto;
+      border-radius: 20px;
+      box-shadow: 0 25px 50px rgba(196, 138, 126, 0.2);
+      object-fit: cover;
+      animation: float 6s ease-in-out infinite; 
     }
     
     @keyframes float {
@@ -178,7 +182,7 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
 
-    /* === 動作按鈕 === */
+    
     .action-btn { 
       font-family: 'Lato', sans-serif;
       font-weight: 700;
@@ -267,7 +271,7 @@
   <main class="main-content">
     
     <div id="view-home" class="view-section active">
-      <img src="https://images.unsplash.com/photo-1610484826967-09c5720778c7?auto=format&fit=crop&w=800&q=80" alt="Cute School Illustration" class="cute-illustration" style="border-radius: 20px; box-shadow: 0 15px 35px rgba(196, 138, 126, 0.15);">
+      <img src="https://i.pinimg.com/originals/84/1d/1f/841d1f0545f661cb9761a4fb42c019da.jpg" alt="Aesthetic Anime Classroom Illustration" class="classroom-img">
     </div>
 
     <div id="view-students" class="view-section">
@@ -340,6 +344,7 @@
     const baseUrl = 'https://db-vh7z.onrender.com/api';
     let currentCourseId = '';
 
+    
     function switchMainView(viewId, btnElement = null) {
       document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
       document.getElementById('view-' + viewId).classList.add('active');
@@ -396,7 +401,7 @@
         .catch(() => tbody.innerHTML = '<tr><td colspan="6" style="color:#c48a7e; text-align: center; padding: 20px;">資料讀取失敗，請確認後端已更新</td></tr>');
     }
 
-  
+    
     window.onload = () => {
       fetch(`${baseUrl}/`).catch(err => console.log("Render server warming up..."));
     };
