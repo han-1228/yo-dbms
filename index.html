@@ -341,20 +341,28 @@
 
   <script>
     
+   // 💡 確保這裡是你的 Render API 網址
     const baseUrl = 'https://db-vh7z.onrender.com/api';
     let currentCourseId = '';
 
-    
     function switchMainView(viewId, btnElement = null) {
       document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
       document.getElementById('view-' + viewId).classList.add('active');
       
+      // 先把左側所有按鈕的亮起狀態取消
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+      
       if(btnElement) {
-        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
         btnElement.classList.add('active');
       } else {
-        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-        document.getElementById('btn-' + viewId).classList.add('active');
+        // 🚨 修復 Bug 的地方：加入安全檢查
+        let targetBtn = document.getElementById('btn-' + viewId);
+        if (targetBtn) {
+            targetBtn.classList.add('active');
+        } else {
+            // 如果找不到按鈕 (例如進入課程詳細頁)，就預設點亮「課程」按鈕
+            document.getElementById('btn-courses').classList.add('active');
+        }
       }
     }
 
@@ -368,6 +376,7 @@
     function enterCourse(courseId, courseName) {
       currentCourseId = courseId;
       switchMainView('course-detail');
+      // 現在這裡不會再被中斷了，標題會順利更新！
       document.getElementById('course-detail-title').innerText = `${courseName} (${courseId})`;
       document.querySelector('.tab-btn').click(); 
 
@@ -401,7 +410,7 @@
         .catch(() => tbody.innerHTML = '<tr><td colspan="6" style="color:#c48a7e; text-align: center; padding: 20px;">資料讀取失敗，請確認後端已更新</td></tr>');
     }
 
-    
+    // 系統啟動靜默喚醒 Render
     window.onload = () => {
       fetch(`${baseUrl}/`).catch(err => console.log("Render server warming up..."));
     };
