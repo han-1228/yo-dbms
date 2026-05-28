@@ -21,6 +21,7 @@ def init_db_from_csv():
     conn = get_db_connection()
     cursor = conn.cursor()
     
+   
     cursor.executescript("""
         CREATE TABLE IF NOT EXISTS Students (
             STU_ID VARCHAR(10) PRIMARY KEY, STU_NAME VARCHAR(50), CLASS_NAME VARCHAR(20), SEAT_NUM INT
@@ -29,8 +30,8 @@ def init_db_from_csv():
             COURSE_ID VARCHAR(10) PRIMARY KEY, COURSE_NAME VARCHAR(100), SEMESTER VARCHAR(20)
         );
         CREATE TABLE IF NOT EXISTS Enrollments (
+            ENROLL_ID VARCHAR(10) PRIMARY KEY, 
             STU_ID VARCHAR(10), COURSE_ID VARCHAR(10),
-            PRIMARY KEY (STU_ID, COURSE_ID),
             FOREIGN KEY (STU_ID) REFERENCES Students(STU_ID),
             FOREIGN KEY (COURSE_ID) REFERENCES Courses(COURSE_ID)
         );
@@ -50,10 +51,11 @@ def init_db_from_csv():
         );
     """)
     
+  
     files_to_import = {
         'students.csv': "INSERT OR IGNORE INTO Students VALUES (?, ?, ?, ?)",
         'courses.csv': "INSERT OR IGNORE INTO Courses VALUES (?, ?, ?)",
-        'enrollments.csv': "INSERT OR IGNORE INTO Enrollments VALUES (?, ?)",
+        'enrollments.csv': "INSERT OR IGNORE INTO Enrollments VALUES (?, ?, ?)",
         'assessments.csv': "INSERT OR IGNORE INTO Assessments VALUES (?, ?, ?, ?, ?)",
         'scores.csv': "INSERT OR IGNORE INTO Scores VALUES (?, ?, ?, ?)",
         'portfolios.csv': "INSERT OR IGNORE INTO Portfolios VALUES (?, ?, ?, ?, ?, ?)"
