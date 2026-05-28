@@ -14,14 +14,13 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row 
     return conn
 
+
 def init_db_from_csv():
     if os.path.exists(DB_FILE):
         os.remove(DB_FILE)
         
     conn = get_db_connection()
     cursor = conn.cursor()
-    
-    # 建立全部 6 張關聯表
     cursor.executescript("""
         CREATE TABLE IF NOT EXISTS Students (
             STU_ID VARCHAR(10) PRIMARY KEY, STU_NAME VARCHAR(50), CLASS_NAME VARCHAR(20), SEAT_NUM INT
@@ -51,8 +50,8 @@ def init_db_from_csv():
         );
     """)
     
-    # 讀取所有 CSV (加入防錯機制)
-    files = {
+    # 2. 自動讀取對應的 CSV 並塞入資料表
+    files_to_import = {
         '1.students.csv': "INSERT OR IGNORE INTO Students VALUES (?, ?, ?, ?)",
         '2.courses.csv': "INSERT OR IGNORE INTO Courses VALUES (?, ?, ?)",
         '3.enrollments.csv': "INSERT OR IGNORE INTO Enrollments VALUES (?, ?)",
@@ -61,89 +60,111 @@ def init_db_from_csv():
         '6.portfolios.csv': "INSERT OR IGNORE INTO Portfolios VALUES (?, ?, ?, ?, ?, ?)"
     }
 
-    for filename, query in files.items():
+    for filename, query in files_to_import.items():
         if os.path.exists(filename):
+            # 使用 utf-8-sig 避免 Windows CSV 產生的 BOM 亂碼
             with open(filename, 'r', encoding='utf-8-sig') as f:
                 reader = csv.reader(f)
-                next(reader, None)
+                next(reader, None) # 跳過標題列
                 for row in reader:
-                    if row:
+                    if row: # 確保不是空行
                         try:
-                            # 動態切齊參數長度
-                            cursor.execute(query, row[:query.count('?')])
+                            # 取 row 的前 N 個元素，N 由 query 裡面的問號數量決定
+                            param_count = query.count('?')
+                            cursor.execute(query, row[:param_count])
                         except Exception as e:
-                            print(f"寫入 {filename} 發生錯誤: {e}")
+                            print(f"寫入 {filename} 時略過一筆錯誤資料: {e}")
 
     conn.commit()
     conn.close()
     print("🎉 資料庫及 6 張表格全數建立並匯入完成！")
 
+# 開機自動執行建庫腳本
 init_db_from_csv()
 
 
 # ==========================================
-# 網頁 API 接口 (透過 SQL JOIN 聯動資料)
+# 網頁要求的 API 接口 (SQL JOIN 實作)
 # ==========================================
+
+# [系統狀態 API]
 @app.route('/', methods=['GET'])
 def home():
     return jsonify({"message": "API 伺服器正常運作中！"}), 200
 
+# [全校學生名單 API]
 @app.route('/api/students', methods=['GET'])
 def get_students():
-    conn = get_db_connection()
-    rows = conn.execute("SELECT * FROM Students").fetchall()
-    conn.close()
-    return jsonify([dict(row) for row in rows]), 200
+    try:
+        conn = get_db_connection()
+        rows = conn.execute("SELECT STU_ID, STU_NAME, CLASS_NAME, SEAT_NUM FROM Students").fetchall()
+        conn.close()
+        return jsonify([dict(row) for row in rows]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
+# [全校開課清單 API]
 @app.route('/api/courses', methods=['GET'])
 def get_courses():
-    conn = get_db_connection()
-    rows = conn.execute("SELECT * FROM Courses").fetchall()
-    conn.close()
-    return jsonify([dict(row) for row in rows]), 200
+    try:
+        conn = get_db_connection()
+        rows = conn.execute("SELECT COURSE_ID, COURSE_NAME, SEMESTER FROM Courses").fetchall()
+        conn.close()
+        return jsonify([dict(row) for row in rows]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-# 取得特定課程的「修課名單」
+# [特定課程 API 1：修課名單 (JOIN Enrollments & Students)]
 @app.route('/api/course/<course_id>/roster', methods=['GET'])
 def get_course_roster(course_id):
-    conn = get_db_connection()
-    query = """
-        SELECT s.STU_ID, s.STU_NAME, s.CLASS_NAME, s.SEAT_NUM 
-        FROM Students s 
-        JOIN Enrollments e ON s.STU_ID = e.STU_ID 
-        WHERE e.COURSE_ID = ?
-    """
-    rows = conn.execute(query, (course_id,)).fetchall()
-    conn.close()
-    return jsonify([dict(row) for row in rows]), 200
+    try:
+        conn = get_db_connection()
+        query = """
+            SELECT s.STU_ID, s.STU_NAME, s.CLASS_NAME, s.SEAT_NUM 
+            FROM Students s 
+            JOIN Enrollments e ON s.STU_ID = e.STU_ID 
+            WHERE e.COURSE_ID = ?
+        """
+        rows = conn.execute(query, (course_id,)).fetchall()
+        conn.close()
+        return jsonify([dict(row) for row in rows]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-# 取得特定課程的「成績單」
+# [特定課程 API 2：學生成績 (JOIN Scores, Students & Assessments)]
 @app.route('/api/course/<course_id>/scores', methods=['GET'])
 def get_course_scores(course_id):
-    conn = get_db_connection()
-    query = """
-        SELECT s.STU_ID, s.CLASS_NAME, s.SEAT_NUM, s.STU_NAME, a.AST_NAME, sc.SCORE 
-        FROM Scores sc 
-        JOIN Students s ON sc.STU_ID = s.STU_ID 
-        JOIN Assessments a ON sc.AST_ID = a.AST_ID 
-        WHERE a.COURSE_ID = ?
-    """
-    rows = conn.execute(query, (course_id,)).fetchall()
-    conn.close()
-    return jsonify([dict(row) for row in rows]), 200
+    try:
+        conn = get_db_connection()
+        query = """
+            SELECT s.STU_ID, s.CLASS_NAME, s.SEAT_NUM, s.STU_NAME, a.AST_NAME, sc.SCORE 
+            FROM Scores sc 
+            JOIN Students s ON sc.STU_ID = s.STU_ID 
+            JOIN Assessments a ON sc.AST_ID = a.AST_ID 
+            WHERE a.COURSE_ID = ?
+        """
+        rows = conn.execute(query, (course_id,)).fetchall()
+        conn.close()
+        return jsonify([dict(row) for row in rows]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-# 取得特定課程的「作品表」
+# [特定課程 API 3：作品集 (JOIN Portfolios & Students)]
 @app.route('/api/course/<course_id>/portfolios', methods=['GET'])
 def get_course_portfolios(course_id):
-    conn = get_db_connection()
-    query = """
-        SELECT s.CLASS_NAME, s.SEAT_NUM, s.STU_NAME, p.PORT_NAME, p.PORT_LINK, p.UPLOAD_DATE 
-        FROM Portfolios p 
-        JOIN Students s ON p.STU_ID = s.STU_ID 
-        WHERE p.COURSE_ID = ?
-    """
-    rows = conn.execute(query, (course_id,)).fetchall()
-    conn.close()
-    return jsonify([dict(row) for row in rows]), 200
+    try:
+        conn = get_db_connection()
+        query = """
+            SELECT s.CLASS_NAME, s.SEAT_NUM, s.STU_NAME, p.PORT_NAME, p.PORT_LINK, p.UPLOAD_DATE 
+            FROM Portfolios p 
+            JOIN Students s ON p.STU_ID = s.STU_ID 
+            WHERE p.COURSE_ID = ?
+        """
+        rows = conn.execute(query, (course_id,)).fetchall()
+        conn.close()
+        return jsonify([dict(row) for row in rows]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
