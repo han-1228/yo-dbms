@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
   
   <style>
-    
+    /* === 核心配色與全域設定 === */
     :root {
       --bg-main: #fdfaf9;     
       --bg-sidebar: #ffffff;  
@@ -100,31 +100,6 @@
 
     .view-section.active { display: block; animation: fadeIn 0.4s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-    
-    #view-home {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 70vh;
-      background-color: transparent; 
-      box-shadow: none;
-    }
-
-    .classroom-img {
-      width: 100%;
-      max-width: 580px; 
-      height: auto;
-      border-radius: 20px;
-      box-shadow: 0 25px 50px rgba(196, 138, 126, 0.2);
-      object-fit: cover;
-      animation: float 6s ease-in-out infinite; 
-    }
-    
-    @keyframes float {
-      0% { transform: translateY(0px); }
-      50% { transform: translateY(-20px); }
-      100% { transform: translateY(0px); }
-    }
     
     h2 { 
       font-family: 'Playfair Display', "Songti TC", serif;
@@ -249,7 +224,6 @@
     }
     .link-style:hover { color: var(--primary-hover); }
 
-  
     .avg-display {
       font-weight: 800;
       color: var(--primary);
@@ -266,15 +240,21 @@
       <span class="sys-subtitle">School Administration</span>
     </div>
     
-    <button class="nav-btn active" id="btn-home" onclick="switchMainView('home', this)">Home / 首頁</button>
+    <button class="nav-btn active" id="btn-courses" onclick="switchMainView('courses', this)">Courses / 課程管理</button>
     <button class="nav-btn" id="btn-students" onclick="switchMainView('students', this)">Students / 全校名單</button>
-    <button class="nav-btn" id="btn-courses" onclick="switchMainView('courses', this)">Courses / 課程管理</button>
   </aside>
 
   <main class="main-content">
     
-    <div id="view-home" class="view-section active">
-      <img src="https://i.pinimg.com/originals/84/1d/1f/841d1f0545f661cb9761a4fb42c019da.jpg" alt="Aesthetic Anime Classroom Illustration" class="classroom-img">
+    <div id="view-courses" class="view-section active">
+      <h2>Featured Courses</h2>
+      <button class="action-btn" onclick="fetchCoursesFromAPI()" style="margin-bottom:20px;">Reload Courses</button>
+      <table>
+        <thead><tr><th>代碼 Code</th><th>名稱 Course Name</th><th>學期 Semester</th><th>操作 Action</th></tr></thead>
+        <tbody id="courses-tbody">
+          <tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">等待資料載入...</td></tr>
+        </tbody>
+      </table>
     </div>
 
     <div id="view-students" class="view-section">
@@ -283,17 +263,6 @@
       <table>
         <thead><tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th></tr></thead>
         <tbody id="students-tbody">
-          <tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">等待資料載入...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div id="view-courses" class="view-section">
-      <h2>Featured Courses</h2>
-      <button class="action-btn" onclick="fetchCoursesFromAPI()" style="margin-bottom:20px;">Load Courses</button>
-      <table>
-        <thead><tr><th>代碼 Code</th><th>名稱 Course Name</th><th>學期 Semester</th><th>操作 Action</th></tr></thead>
-        <tbody id="courses-tbody">
           <tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">等待資料載入...</td></tr>
         </tbody>
       </table>
@@ -357,7 +326,6 @@
       } else {
         let targetBtn = document.getElementById('btn-' + viewId);
         if (targetBtn) targetBtn.classList.add('active');
-        else document.getElementById('btn-courses').classList.add('active');
       }
     }
 
@@ -379,7 +347,6 @@
       fetchCourseData(courseId, 'portfolios');
     }
 
-    
     function calculateRowAverage(inputElem) {
       const tr = inputElem.closest('tr');
       const inputs = tr.querySelectorAll('.score-input');
@@ -395,7 +362,6 @@
         }
       });
 
-      // 計算平均並四捨五入到小數點第一位
       let avg = count > 0 ? (total / count).toFixed(1) : 0;
       avgCell.innerText = avg;
     }
@@ -425,7 +391,6 @@
               }
             });
 
-            // 表頭增加「總平均 AVG」
             let headerHtml = `<tr>
               <th>學號 ID</th>
               <th>班級 Class</th>
@@ -461,14 +426,12 @@
               let totalScore = 0;
               let assessCount = assessmentItems.length;
 
-              
               assessmentItems.forEach(item => {
                 let scoreValue = student.grades[item] !== undefined ? student.grades[item] : '';
                 if(scoreValue !== '') totalScore += parseFloat(scoreValue);
                 rowHtml += `<td><input type="number" class="score-input" value="${scoreValue}" oninput="calculateRowAverage(this)"></td>`;
               });
               
-           
               let initialAvg = assessCount > 0 ? (totalScore / assessCount).toFixed(1) : 0;
               rowHtml += `<td class="avg-display">${initialAvg}</td>`;
               
@@ -491,6 +454,7 @@
 
     window.onload = () => {
       fetch(`${baseUrl}/`).catch(err => console.log("Render server warming up..."));
+      fetchCoursesFromAPI(); 
     };
 
     function fetchStudentsFromAPI() {
