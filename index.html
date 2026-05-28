@@ -151,7 +151,6 @@
     tbody tr:nth-child(even) { background-color: var(--bg-card); }
     tbody tr:hover { background-color: #f2e9e7; }
     
-    /* === 課程內部分頁 (Tabs) === */
     .course-tabs { 
       display: flex; gap: 20px; 
       margin-bottom: 30px; 
@@ -179,7 +178,6 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
 
-    /* === 動作按鈕 === */
     .action-btn { 
       font-family: 'Lato', sans-serif;
       font-weight: 700;
@@ -238,6 +236,7 @@
       font-family: 'Lato', sans-serif;
       color: var(--text-main);
       background-color: var(--bg-main);
+      font-weight: 600;
     }
     .score-input:focus {
       outline: none;
@@ -249,6 +248,13 @@
       color: var(--primary); text-decoration: none; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;
     }
     .link-style:hover { color: var(--primary-hover); }
+
+  
+    .avg-display {
+      font-weight: 800;
+      color: var(--primary);
+      font-size: 16px;
+    }
 
   </style>
 </head>
@@ -373,6 +379,28 @@
       fetchCourseData(courseId, 'portfolios');
     }
 
+    
+    function calculateRowAverage(inputElem) {
+      const tr = inputElem.closest('tr');
+      const inputs = tr.querySelectorAll('.score-input');
+      const avgCell = tr.querySelector('.avg-display');
+      
+      let total = 0;
+      let count = inputs.length;
+
+      inputs.forEach(inp => {
+        let val = parseFloat(inp.value);
+        if (!isNaN(val)) {
+          total += val;
+        }
+      });
+
+      // 計算平均並四捨五入到小數點第一位
+      let avg = count > 0 ? (total / count).toFixed(1) : 0;
+      avgCell.innerText = avg;
+    }
+
+
     function fetchCourseData(courseId, type) {
       const tbody = document.getElementById(`${type}-tbody`);
       tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">資料載入中...</td></tr>`;
@@ -390,7 +418,6 @@
             const thead = document.getElementById('scores-thead');
             thead.innerHTML = '';
             
-            // 1. 找出這門課到底有哪些「不重複的評量項目」（例如：期中考、期末考、作業一）
             let assessmentItems = [];
             data.forEach(row => {
               if (!assessmentItems.includes(row.AST_NAME)) {
@@ -398,7 +425,7 @@
               }
             });
 
-            // 2. 動態生成橫向的 Table Header (直向顯示姓名座號，橫向是考科)
+            // 表頭增加「總平均 AVG」
             let headerHtml = `<tr>
               <th>學號 ID</th>
               <th>班級 Class</th>
@@ -407,10 +434,9 @@
             assessmentItems.forEach(item => {
               headerHtml += `<th>${item}</th>`;
             });
-            headerHtml += `</tr>`;
+            headerHtml += `<th style="color: var(--primary);">總平均 AVG</th></tr>`;
             thead.innerHTML = headerHtml;
 
-            // 3. 把扁平的資料整理成以「學號」為單位的學生字典
             let studentMatrix = {};
             data.forEach(row => {
               if (!studentMatrix[row.STU_ID]) {
@@ -419,14 +445,12 @@
                   name: row.STU_NAME,
                   className: row.CLASS_NAME,
                   seatNum: row.SEAT_NUM,
-                  grades: {} // 用來存各考科的分數
+                  grades: {}
                 };
               }
-              // 將考科對應的分數填入
               studentMatrix[row.STU_ID].grades[row.AST_NAME] = row.SCORE;
             });
 
-            // 4. 開始渲染每一列（一個學生佔用一列）
             Object.values(studentMatrix).forEach(student => {
               let rowHtml = `<tr>
                 <td style="font-weight:700;">${student.id}</td>
@@ -434,20 +458,25 @@
                 <td>${student.seatNum}</td>
                 <td style="font-weight:700;">${student.name}</td>`;
               
-              // 橫向遍歷所有的評量項目，有分數就填入 input，沒有就留空
+              let totalScore = 0;
+              let assessCount = assessmentItems.length;
+
+              
               assessmentItems.forEach(item => {
                 let scoreValue = student.grades[item] !== undefined ? student.grades[item] : '';
-                rowHtml += `<td><input type="number" class="score-input" value="${scoreValue}"></td>`;
+                if(scoreValue !== '') totalScore += parseFloat(scoreValue);
+                rowHtml += `<td><input type="number" class="score-input" value="${scoreValue}" oninput="calculateRowAverage(this)"></td>`;
               });
+              
+           
+              let initialAvg = assessCount > 0 ? (totalScore / assessCount).toFixed(1) : 0;
+              rowHtml += `<td class="avg-display">${initialAvg}</td>`;
               
               rowHtml += `</tr>`;
               tbody.innerHTML += rowHtml;
             });
 
           } else {
-            // ==========================================
-            // 📝 一般名單與作品表的渲染（保持不變）
-            // ==========================================
             data.forEach(item => {
               if (type === 'roster') {
                 tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td></tr>`;
