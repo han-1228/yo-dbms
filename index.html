@@ -319,8 +319,66 @@
     function enterCourse(courseId, courseName) { currentCourseId = courseId; switchMainView('course-detail'); document.getElementById('course-detail-title').innerText = `${courseName} (${courseId})`; document.querySelector('.tab-btn').click(); fetchCourseData(courseId, 'roster'); fetchCourseData(courseId, 'scores'); fetchCourseData(courseId, 'portfolios'); }
     function calculateRowAverage(inputElem) { const tr = inputElem.closest('tr'); const inputs = tr.querySelectorAll('.score-input'); const avgCell = tr.querySelector('.avg-display'); let total = 0; let count = inputs.length; inputs.forEach(inp => { let val = parseFloat(inp.value); if (!isNaN(val)) { total += val; } }); let avg = count > 0 ? (total / count).toFixed(1) : 0; avgCell.innerText = avg; }
     function updateFileNameDisplay(inputElem) { const card = inputElem.closest('.upload-card'); const nameText = card.querySelector('.file-name-text'); if(inputElem.files.length > 0) { nameText.innerText = `📄 ${inputElem.files[0].name}`; nameText.style.color = "#166534"; } else { nameText.innerText = "尚未選取檔案"; nameText.style.color = "var(--primary)"; } }
-    function simulateUpload(btnElem) { const card = btnElem.closest('.upload-card'); const fileInput = card.querySelector('.file-input-hidden'); if(fileInput.files.length === 0) { alert("請先選擇要上傳的 CSV 檔案！"); return; } const originalText = btnElem.innerText; btnElem.disabled = true; btnElem.innerText = "上傳中... ⏳"; btnElem.style.backgroundColor = "#9ca3af"; setTimeout(() => { btnElem.disabled = false; btnElem.innerText = originalText; btnElem.style.backgroundColor = "var(--primary)"; alert(`🎉 [前端模擬成功] 檔案 ${fileInput.files[0].name} 已發送！(待實作後端接收 API)`); }, 1500); }
+    async function simulateUpload(btnElem) {
+      const card = btnElem.closest('.upload-card');
+      const fileInput = card.querySelector('.file-input-hidden');
+      if (!fileInput || fileInput.files.length === 0) {
+        alert("請先選擇要上傳的 CSV 檔案！");
+        return;
+      }
+      const file = fileInput.files[0];
 
+      // 由卡片標題推斷上傳類型
+      const title = (card.querySelector('h3')?.innerText || '').toLowerCase();
+      let type = 'unknown';
+      if (/students|名單/.test(title)) type = 'students';
+      else if (/courses|課程/.test(title)) type = 'courses';
+      else if (/enroll|修課/.test(title)) type = 'enrollments';
+      else if (/assess|評量/.test(title)) type = 'assessments';
+      else if (/score|成績/.test(title)) type = 'scores';
+      else if (/portfolio|作品/.test(title)) type = 'portfolios';
+
+      const form = new FormData();
+      form.append('file', file);
+      form.append('type', type);
+
+      const originalText = btnElem.innerText;
+      btnElem.disabled = true;
+      btnElem.innerText = "上傳中... ⏳";
+
+      try {
+        const res = await fetch(`${baseUrl}/upload`, { method: 'POST', body: form });
+        btnElem.disabled = false;
+        btnElem.innerText = originalText;
+        if (!res.ok) {
+          const txt = await res.text().catch(()=>null);
+          throw new Error(txt || `伺服器回應 ${res.status}`);
+        }
+        const json = await res.json().catch(()=>({ message: '上傳完成' }));
+        alert(`🎉 檔案 ${file.name} 上傳成功：${json.message || ''}`);
+
+        // 上傳成功後依類型刷新前端資料
+        if (type === 'students') fetchStudentsFromAPI();
+        if (type === 'courses') fetchCoursesFromAPI();
+        if (['enrollments','assessments','scores','portfolios'].includes(type) && currentCourseId) {
+          fetchCourseData(currentCourseId, 'roster');
+          fetchCourseData(currentCourseId, 'scores');
+          fetchCourseData(currentCourseId, 'portfolios');
+        }
+      } catch (err) {
+        btnElem.disabled = false;
+        btnElem.innerText = originalText;
+        alert(`上傳失敗：${err.message || err}`);
+      }
+    }
+    // 讓「選擇檔案」按鈕實際打開隱藏的 input
+    window.addEventListener('load', () => {
+      document.querySelectorAll('.upload-card').forEach(card => {
+        const selectBtn = card.querySelector('.file-input-wrapper > .action-btn');
+        const input = card.querySelector('.file-input-hidden');
+        if (selectBtn && input) selectBtn.addEventListener('click', (e) => { e.preventDefault(); input.click(); });
+      });
+    });
   
     function addStudentFrontend() {
       const input = document.getElementById('add-student-input');
