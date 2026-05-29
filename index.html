@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
   
   <style>
-    
+  
     :root {
       --bg-main: #fdfaf9;     
       --bg-sidebar: #ffffff;  
@@ -46,15 +46,6 @@
       margin-bottom: 40px; 
       text-align: center; 
       letter-spacing: 3px;
-    }
-    .sys-subtitle {
-      display: block;
-      font-family: 'Lato', sans-serif;
-      font-size: 11px;
-      letter-spacing: 2px;
-      color: var(--primary);
-      text-transform: uppercase;
-      margin-top: 8px;
     }
     
     .nav-btn {
@@ -111,7 +102,7 @@
       letter-spacing: 0.5px;
     }
     
-   
+    /* === 現代化表格設計 === */
     table { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: left; font-size: 14px; }
     th, td { padding: 16px 12px; border-bottom: 1px solid var(--border); }
     th { 
@@ -231,17 +222,17 @@
       font-size: 16px;
     }
 
+    /* === 資料上傳 === */
     .upload-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 25px;
-      margin-top: 20px;
     }
     .upload-card {
       background: var(--bg-card);
       border: 1px dashed var(--border);
       border-radius: 12px;
-      padding: 25px;
+      padding: 30px 25px;
       text-align: center;
       transition: all 0.3s ease;
     }
@@ -253,18 +244,13 @@
     .upload-card h3 {
       font-family: 'Playfair Display', serif;
       margin-top: 0;
+      margin-bottom: 25px;
       font-size: 18px;
       color: #000000;
     }
-    .upload-card p {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-bottom: 20px;
-    }
-    
     .file-input-wrapper {
       position: relative;
-      margin-bottom: 12px;
+      margin-bottom: 15px;
       display: inline-block;
     }
     .file-input-hidden {
@@ -275,21 +261,27 @@
 <body>
 
   <aside class="sidebar-left">
-    <div class="sys-title">
-      校務系統
-      <span class="sys-subtitle">School Administration</span>
-    </div>
+    <div class="sys-title">校務系統</div>
     
-    <button class="nav-btn active" id="btn-courses" onclick="switchMainView('courses', this)">Courses / 課程管理</button>
-    
+    <button class="nav-btn active" id="btn-students" onclick="switchMainView('students', this)">Students / 全校名單</button>
+    <button class="nav-btn" id="btn-courses" onclick="switchMainView('courses', this)">Courses / 課程管理</button>
     <button class="nav-btn" id="btn-upload" onclick="switchMainView('upload', this)">Upload / 資料上傳</button>
-    
-    <button class="nav-btn" id="btn-students" onclick="switchMainView('students', this)">Students / 全校名單</button>
   </aside>
 
   <main class="main-content">
     
-    <div id="view-courses" class="view-section active">
+    <div id="view-students" class="view-section active">
+      <h2>Student Roster</h2>
+      <button class="action-btn" onclick="fetchStudentsFromAPI()">Reload List</button>
+      <table>
+        <thead><tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th></tr></thead>
+        <tbody id="students-tbody">
+          <tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">等待資料載入...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="view-courses" class="view-section">
       <h2>Featured Courses</h2>
       <button class="action-btn" onclick="fetchCoursesFromAPI()" style="margin-bottom:20px;">Reload Courses</button>
       <table>
@@ -302,86 +294,68 @@
 
     <div id="view-upload" class="view-section">
       <h2>Data Upload Center</h2>
-      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;">請選擇您要更新或倒入的校務 CSV 模組檔案。上傳後系統將自動解析並寫入關聯式資料庫中。</p>
       
       <div class="upload-grid">
         <div class="upload-card">
           <h3>Students 名單</h3>
-          <p>適合檔案: `students.csv`</p>
           <div class="file-input-wrapper">
             <button class="action-btn">選擇檔案</button>
             <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
           </div>
-          <div style="font-size:12px; color:var(--primary); margin-bottom:10px;" class="file-name-text">尚未選取檔案</div>
+          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
           <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
         </div>
 
         <div class="upload-card">
           <h3>Courses 課程</h3>
-          <p>適合檔案: `courses.csv`</p>
           <div class="file-input-wrapper">
             <button class="action-btn">選擇檔案</button>
             <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
           </div>
-          <div style="font-size:12px; color:var(--primary); margin-bottom:10px;" class="file-name-text">尚未選取檔案</div>
+          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
           <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
         </div>
 
         <div class="upload-card">
           <h3>Enrollments 修課紀錄</h3>
-          <p>適合檔案: `enrollments.csv`</p>
           <div class="file-input-wrapper">
             <button class="action-btn">選擇檔案</button>
             <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
           </div>
-          <div style="font-size:12px; color:var(--primary); margin-bottom:10px;" class="file-name-text">尚未選取檔案</div>
+          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
           <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
         </div>
 
         <div class="upload-card">
           <h3>Assessments 評量項目</h3>
-          <p>適合檔案: `assessments.csv`</p>
           <div class="file-input-wrapper">
             <button class="action-btn">選擇檔案</button>
             <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
           </div>
-          <div style="font-size:12px; color:var(--primary); margin-bottom:10px;" class="file-name-text">尚未選取檔案</div>
+          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
           <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
         </div>
 
         <div class="upload-card">
           <h3>Scores 歷史成績</h3>
-          <p>適合檔案: `scores.csv`</p>
           <div class="file-input-wrapper">
             <button class="action-btn">選擇檔案</button>
             <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
           </div>
-          <div style="font-size:12px; color:var(--primary); margin-bottom:10px;" class="file-name-text">尚未選取檔案</div>
+          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
           <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
         </div>
 
         <div class="upload-card">
           <h3>Portfolios 作品集</h3>
-          <p>適合檔案: `portfolios.csv`</p>
           <div class="file-input-wrapper">
             <button class="action-btn">選擇檔案</button>
             <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
           </div>
-          <div style="font-size:12px; color:var(--primary); margin-bottom:10px;" class="file-name-text">尚未選取檔案</div>
+          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
           <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
         </div>
       </div>
-    </div>
-
-    <div id="view-students" class="view-section">
-      <h2>Student Roster</h2>
-      <button class="action-btn" onclick="fetchStudentsFromAPI()">Reload List</button>
-      <table>
-        <thead><tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th></tr></thead>
-        <tbody id="students-tbody">
-          <tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">等待資料載入...</td></tr>
-        </tbody>
-      </table>
     </div>
 
     <div id="view-course-detail" class="view-section">
@@ -482,20 +456,18 @@
       avgCell.innerText = avg;
     }
 
-  
     function updateFileNameDisplay(inputElem) {
       const card = inputElem.closest('.upload-card');
       const nameText = card.querySelector('.file-name-text');
       if(inputElem.files.length > 0) {
         nameText.innerText = `📄 ${inputElem.files[0].name}`;
-        nameText.style.color = "#166534"; // 變成深綠色代表已選取
+        nameText.style.color = "#166534"; 
       } else {
         nameText.innerText = "尚未選取檔案";
         nameText.style.color = "var(--primary)";
       }
     }
 
-    
     function simulateUpload(btnElem) {
       const card = btnElem.closest('.upload-card');
       const fileInput = card.querySelector('.file-input-hidden');
@@ -514,7 +486,7 @@
         btnElem.disabled = false;
         btnElem.innerText = originalText;
         btnElem.style.backgroundColor = "var(--primary)";
-        alert(`🎉 [前端模擬成功] 檔案 ${fileInput.files[0].name} 已打包發送！後端資料庫接收完成 (待實作 POST 接軌)。`);
+        alert(`🎉 [前端模擬成功] 檔案 ${fileInput.files[0].name} 已發送！(待實作後端接收 API)`);
       }, 1500);
     }
 
@@ -604,8 +576,10 @@
         .catch(() => tbody.innerHTML = '<tr><td style="color:#c48a7e; text-align: center; padding: 20px;">資料讀取失敗，請確認後端已更新</td></tr>');
     }
 
+   
     window.onload = () => {
       fetch(`${baseUrl}/`).catch(err => console.log("Render server warming up..."));
+      fetchStudentsFromAPI();
       fetchCoursesFromAPI(); 
     };
 
