@@ -13,6 +13,7 @@ import csv
 import io
 
 app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False
 CORS(app)
 
 db_config = {
