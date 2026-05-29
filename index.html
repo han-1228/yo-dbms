@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
   
   <style>
-  
+    /* === 核心配色與全域設定 === */
     :root {
       --bg-main: #fdfaf9;     
       --bg-sidebar: #ffffff;  
@@ -102,7 +102,7 @@
       letter-spacing: 0.5px;
     }
     
-    /* === 現代化表格設計 === */
+   
     table { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: left; font-size: 14px; }
     th, td { padding: 16px 12px; border-bottom: 1px solid var(--border); }
     th { 
@@ -195,6 +195,37 @@
       text-decoration: underline;
     }
 
+    
+    .round-search-input {
+      width: 260px;
+      padding: 10px 20px;
+      border: 1px solid var(--border);
+      border-radius: 20px; /* 完美大圓角 */
+      font-family: 'Lato', sans-serif;
+      color: var(--text-main);
+      background-color: var(--bg-main);
+      font-size: 13px;
+      transition: all 0.3s;
+    }
+    .round-search-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      background-color: var(--bg-sidebar);
+      box-shadow: 0 0 10px rgba(196, 138, 126, 0.15);
+    }
+
+    /* 工具列控制項排版 */
+    .action-toolbar {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .toolbar-spacer {
+      flex: 1;
+    }
+    
+   
     .score-input { 
       width: 55px; padding: 8px; 
       border: 1px solid var(--border); 
@@ -205,200 +236,76 @@
       background-color: var(--bg-main);
       font-weight: 600;
     }
-    .score-input:focus {
-      outline: none;
-      border-color: var(--primary);
-      background-color: var(--bg-sidebar);
-    }
-
-    .link-style { 
-      color: var(--primary); text-decoration: none; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;
-    }
+    .score-input:focus { outline: none; border-color: var(--primary); background-color: var(--bg-sidebar); }
+    .link-style { color: var(--primary); text-decoration: none; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
     .link-style:hover { color: var(--primary-hover); }
-
-    .avg-display {
-      font-weight: 800;
-      color: var(--primary);
-      font-size: 16px;
-    }
-
-    /* === 資料上傳 === */
-    .upload-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 25px;
-    }
-    .upload-card {
-      background: var(--bg-card);
-      border: 1px dashed var(--border);
-      border-radius: 12px;
-      padding: 30px 25px;
-      text-align: center;
-      transition: all 0.3s ease;
-    }
-    .upload-card:hover {
-      border-color: var(--primary);
-      box-shadow: 0 8px 20px rgba(196, 138, 126, 0.1);
-      transform: translateY(-2px);
-    }
-    .upload-card h3 {
-      font-family: 'Playfair Display', serif;
-      margin-top: 0;
-      margin-bottom: 25px;
-      font-size: 18px;
-      color: #000000;
-    }
-    .file-input-wrapper {
-      position: relative;
-      margin-bottom: 15px;
-      display: inline-block;
-    }
-    .file-input-hidden {
-      position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer;
-    }
+    .avg-display { font-weight: 800; color: var(--primary); font-size: 16px; }
+    .upload-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; }
+    .upload-card { background: var(--bg-card); border: 1px dashed var(--border); border-radius: 12px; padding: 30px 25px; text-align: center; transition: all 0.3s ease; }
+    .upload-card:hover { border-color: var(--primary); box-shadow: 0 8px 20px rgba(196, 138, 126, 0.1); transform: translateY(-2px); }
+    .upload-card h3 { font-family: 'Playfair Display', serif; margin-top: 0; margin-bottom: 25px; font-size: 18px; color: #000000; }
+    .file-input-wrapper { position: relative; margin-bottom: 15px; display: inline-block; }
+    .file-input-hidden { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
   </style>
 </head>
 <body>
 
   <aside class="sidebar-left">
     <div class="sys-title">校務系統</div>
-    
-    <button class="nav-btn active" id="btn-students" onclick="switchMainView('students', this)">名單</button>
-    <button class="nav-btn" id="btn-courses" onclick="switchMainView('courses', this)">課程管理</button>
-    <button class="nav-btn" id="btn-upload" onclick="switchMainView('upload', this)">資料上傳</button>
+    <button class="nav-btn active" id="btn-students" onclick="switchMainView('students', this)">Students / 學生名條</button>
+    <button class="nav-btn" id="btn-courses" onclick="switchMainView('courses', this)">Courses / 課程管理</button>
+    <button class="nav-btn" id="btn-upload" onclick="switchMainView('upload', this)">Upload / 資料上傳</button>
   </aside>
 
   <main class="main-content">
     
     <div id="view-students" class="view-section active">
-      <h2>Student Roster</h2>
-      <button class="action-btn" onclick="fetchStudentsFromAPI()">Reload List</button>
+      <h2>學生名條</h2>
+      <div class="action-toolbar">
+        <button class="action-btn" onclick="fetchStudentsFromAPI()">重新整理</button>
+        <div class="toolbar-spacer"></div>
+        <input type="text" id="add-student-input" class="round-search-input" placeholder="請輸入學號姓名等...">
+        <button class="action-btn action-btn-solid" onclick="addStudentFrontend()">新增資料</button>
+      </div>
       <table>
         <thead><tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th></tr></thead>
-        <tbody id="students-tbody">
-          <tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">等待資料載入...</td></tr>
-        </tbody>
+        <tbody id="students-tbody"><tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">等待資料載入...</td></tr></tbody>
       </table>
     </div>
 
     <div id="view-courses" class="view-section">
       <h2>Featured Courses</h2>
-      <button class="action-btn" onclick="fetchCoursesFromAPI()" style="margin-bottom:20px;">Reload Courses</button>
+      <div class="action-toolbar">
+        <button class="action-btn" onclick="fetchCoursesFromAPI()">Reload Courses</button>
+        <div class="toolbar-spacer"></div>
+        <input type="text" id="add-course-input" class="round-search-input" placeholder="請輸入課程代碼、名稱、學期...">
+        <button class="action-btn action-btn-solid" onclick="addCourseFrontend()">新增資料</button>
+      </div>
       <table>
         <thead><tr><th>代碼 Code</th><th>名稱 Course Name</th><th>學期 Semester</th><th>操作 Action</th></tr></thead>
-        <tbody id="courses-tbody">
-          <tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">等待資料載入...</td></tr>
-        </tbody>
+        <tbody id="courses-tbody"><tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">等待資料載入...</td></tr></tbody>
       </table>
     </div>
 
     <div id="view-upload" class="view-section">
       <h2>Data Upload Center</h2>
-      
       <div class="upload-grid">
-        <div class="upload-card">
-          <h3>Students 名單</h3>
-          <div class="file-input-wrapper">
-            <button class="action-btn">選擇檔案</button>
-            <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
-          </div>
-          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
-          <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
-        </div>
-
-        <div class="upload-card">
-          <h3>Courses 課程</h3>
-          <div class="file-input-wrapper">
-            <button class="action-btn">選擇檔案</button>
-            <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
-          </div>
-          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
-          <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
-        </div>
-
-        <div class="upload-card">
-          <h3>Enrollments 修課紀錄</h3>
-          <div class="file-input-wrapper">
-            <button class="action-btn">選擇檔案</button>
-            <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
-          </div>
-          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
-          <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
-        </div>
-
-        <div class="upload-card">
-          <h3>Assessments 評量項目</h3>
-          <div class="file-input-wrapper">
-            <button class="action-btn">選擇檔案</button>
-            <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
-          </div>
-          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
-          <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
-        </div>
-
-        <div class="upload-card">
-          <h3>Scores 歷史成績</h3>
-          <div class="file-input-wrapper">
-            <button class="action-btn">選擇檔案</button>
-            <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
-          </div>
-          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
-          <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
-        </div>
-
-        <div class="upload-card">
-          <h3>Portfolios 作品集</h3>
-          <div class="file-input-wrapper">
-            <button class="action-btn">選擇檔案</button>
-            <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
-          </div>
-          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
-          <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
-        </div>
+        <div class="upload-card"><h3>Students 名單</h3><div class="file-input-wrapper"><button class="action-btn">選擇檔案</button><input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)"></div><div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div><button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button></div>
+        <div class="upload-card"><h3>Courses 課程</h3><div class="file-input-wrapper"><button class="action-btn">選擇檔案</button><input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)"></div><div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div><button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button></div>
+        <div class="upload-card"><h3>Enrollments 修課紀錄</h3><div class="file-input-wrapper"><button class="action-btn">選擇檔案</button><input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)"></div><div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div><button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button></div>
+        <div class="upload-card"><h3>Assessments 評量項目</h3><div class="file-input-wrapper"><button class="action-btn">選擇檔案</button><input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)"></div><div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div><button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button></div>
+        <div class="upload-card"><h3>Scores 歷史成績</h3><div class="file-input-wrapper"><button class="action-btn">選擇檔案</button><input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)"></div><div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div><button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button></div>
+        <div class="upload-card"><h3>Portfolios 作品集</h3><div class="file-input-wrapper"><button class="action-btn">選擇檔案</button><input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)"></div><div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div><button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button></div>
       </div>
     </div>
 
     <div id="view-course-detail" class="view-section">
       <button class="action-btn btn-back" onclick="switchMainView('courses')">← Back to Courses</button>
       <h2 id="course-detail-title">Course Name</h2>
-      
-      <div class="course-tabs">
-        <button class="tab-btn active" onclick="switchCourseTab('roster', this)">Roster 名單</button>
-        <button class="tab-btn" onclick="switchCourseTab('scores', this)">Scores 成績</button>
-        <button class="tab-btn" onclick="switchCourseTab('portfolios', this)">Portfolios 作品</button>
-      </div>
-
-      <div id="tab-roster" class="tab-content active">
-        <table>
-          <thead><tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th></tr></thead>
-          <tbody id="roster-tbody">
-            <tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div id="tab-scores" class="tab-content">
-        <div style="text-align: right; margin-bottom: 15px;">
-          <button class="action-btn action-btn-solid" onclick="alert('成績儲存功能尚未完成後端 API 串接。')">Save Scores</button>
-        </div>
-        <table id="pivot-scores-table">
-          <thead id="scores-thead">
-            </thead>
-          <tbody id="scores-tbody">
-            <tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div id="tab-portfolios" class="tab-content">
-        <table>
-          <thead><tr><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th><th>作品 Portfolio</th><th>連結 Link</th><th>日期 Date</th></tr></thead>
-          <tbody id="portfolios-tbody">
-            <tr><td colspan="6" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr>
-          </tbody>
-        </table>
-      </div>
-
+      <div class="course-tabs"><button class="tab-btn active" onclick="switchCourseTab('roster', this)">Roster 名單</button><button class="tab-btn" onclick="switchCourseTab('scores', this)">Scores 成績</button><button class="tab-btn" onclick="switchCourseTab('portfolios', this)">Portfolios 作品</button></div>
+      <div id="tab-roster" class="tab-content active"><table><thead><tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th></tr></thead><tbody id="roster-tbody"><tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr></tbody></table></div>
+      <div id="tab-scores" class="tab-content"><div style="text-align: right; margin-bottom: 15px;"><button class="action-btn action-btn-solid" onclick="alert('成績儲存功能尚未完成後端 API 串接。')">Save Scores</button></div><table id="pivot-scores-table"><thead id="scores-thead"></thead><tbody id="scores-tbody"><tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr></tbody></table></div>
+      <div id="tab-portfolios" class="tab-content"><table><thead><tr><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th><th>作品 Portfolio</th><th>連結 Link</th><th>日期 Date</th></tr></thead><tbody id="portfolios-tbody"><tr><td colspan="6" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr></tbody></table></div>
     </div>
   </main>
 
@@ -406,204 +313,68 @@
     const baseUrl = 'https://db-vh7z.onrender.com/api';
     let currentCourseId = '';
 
-    function switchMainView(viewId, btnElement = null) {
-      document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-      document.getElementById('view-' + viewId).classList.add('active');
-      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-      
-      if(btnElement) {
-        btnElement.classList.add('active');
-      } else {
-        let targetBtn = document.getElementById('btn-' + viewId);
-        if (targetBtn) targetBtn.classList.add('active');
-      }
-    }
+   
+    function switchMainView(viewId, btnElement = null) { document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active')); document.getElementById('view-' + viewId).classList.add('active'); document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active')); if(btnElement) { btnElement.classList.add('active'); } else { let targetBtn = document.getElementById('btn-' + viewId); if (targetBtn) targetBtn.classList.add('active'); } }
+    function switchCourseTab(tabId, btnElement) { document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active')); document.getElementById('tab-' + tabId).classList.add('active'); btnElement.classList.add('active'); }
+    function enterCourse(courseId, courseName) { currentCourseId = courseId; switchMainView('course-detail'); document.getElementById('course-detail-title').innerText = `${courseName} (${courseId})`; document.querySelector('.tab-btn').click(); fetchCourseData(courseId, 'roster'); fetchCourseData(courseId, 'scores'); fetchCourseData(courseId, 'portfolios'); }
+    function calculateRowAverage(inputElem) { const tr = inputElem.closest('tr'); const inputs = tr.querySelectorAll('.score-input'); const avgCell = tr.querySelector('.avg-display'); let total = 0; let count = inputs.length; inputs.forEach(inp => { let val = parseFloat(inp.value); if (!isNaN(val)) { total += val; } }); let avg = count > 0 ? (total / count).toFixed(1) : 0; avgCell.innerText = avg; }
+    function updateFileNameDisplay(inputElem) { const card = inputElem.closest('.upload-card'); const nameText = card.querySelector('.file-name-text'); if(inputElem.files.length > 0) { nameText.innerText = `📄 ${inputElem.files[0].name}`; nameText.style.color = "#166534"; } else { nameText.innerText = "尚未選取檔案"; nameText.style.color = "var(--primary)"; } }
+    function simulateUpload(btnElem) { const card = btnElem.closest('.upload-card'); const fileInput = card.querySelector('.file-input-hidden'); if(fileInput.files.length === 0) { alert("請先選擇要上傳的 CSV 檔案！"); return; } const originalText = btnElem.innerText; btnElem.disabled = true; btnElem.innerText = "上傳中... ⏳"; btnElem.style.backgroundColor = "#9ca3af"; setTimeout(() => { btnElem.disabled = false; btnElem.innerText = originalText; btnElem.style.backgroundColor = "var(--primary)"; alert(`🎉 [前端模擬成功] 檔案 ${fileInput.files[0].name} 已發送！(待實作後端接收 API)`); }, 1500); }
 
-    function switchCourseTab(tabId, btnElement) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      document.getElementById('tab-' + tabId).classList.add('active');
-      btnElement.classList.add('active');
-    }
-
-    function enterCourse(courseId, courseName) {
-      currentCourseId = courseId;
-      switchMainView('course-detail');
-      document.getElementById('course-detail-title').innerText = `${courseName} (${courseId})`;
-      document.querySelector('.tab-btn').click(); 
-
-      fetchCourseData(courseId, 'roster');
-      fetchCourseData(courseId, 'scores');
-      fetchCourseData(courseId, 'portfolios');
-    }
-
-    function calculateRowAverage(inputElem) {
-      const tr = inputElem.closest('tr');
-      const inputs = tr.querySelectorAll('.score-input');
-      const avgCell = tr.querySelector('.avg-display');
-      
-      let total = 0;
-      let count = inputs.length;
-
-      inputs.forEach(inp => {
-        let val = parseFloat(inp.value);
-        if (!isNaN(val)) {
-          total += val;
-        }
-      });
-
-      let avg = count > 0 ? (total / count).toFixed(1) : 0;
-      avgCell.innerText = avg;
-    }
-
-    function updateFileNameDisplay(inputElem) {
-      const card = inputElem.closest('.upload-card');
-      const nameText = card.querySelector('.file-name-text');
-      if(inputElem.files.length > 0) {
-        nameText.innerText = `📄 ${inputElem.files[0].name}`;
-        nameText.style.color = "#166534"; 
-      } else {
-        nameText.innerText = "尚未選取檔案";
-        nameText.style.color = "var(--primary)";
-      }
-    }
-
-    function simulateUpload(btnElem) {
-      const card = btnElem.closest('.upload-card');
-      const fileInput = card.querySelector('.file-input-hidden');
-      
-      if(fileInput.files.length === 0) {
-        alert("請先選擇要上傳的 CSV 檔案！");
-        return;
-      }
-
-      const originalText = btnElem.innerText;
-      btnElem.disabled = true;
-      btnElem.innerText = "上傳中... ⏳";
-      btnElem.style.backgroundColor = "#9ca3af";
-
-      setTimeout(() => {
-        btnElem.disabled = false;
-        btnElem.innerText = originalText;
-        btnElem.style.backgroundColor = "var(--primary)";
-        alert(`🎉 [前端模擬成功] 檔案 ${fileInput.files[0].name} 已發送！(待實作後端接收 API)`);
-      }, 1500);
-    }
-
-
-    function fetchCourseData(courseId, type) {
-      const tbody = document.getElementById(`${type}-tbody`);
-      tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">資料載入中...</td></tr>`;
-      
-      fetch(`${baseUrl}/course/${courseId}/${type}`)
-        .then(res => res.json())
-        .then(data => {
-          tbody.innerHTML = '';
-          if(data.length === 0) {
-            tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">目前沒有資料</td></tr>`;
-            return;
-          }
-
-          if (type === 'scores') {
-            const thead = document.getElementById('scores-thead');
-            thead.innerHTML = '';
-            
-            let assessmentItems = [];
-            data.forEach(row => {
-              if (!assessmentItems.includes(row.AST_NAME)) {
-                assessmentItems.push(row.AST_NAME);
-              }
-            });
-
-            let headerHtml = `<tr>
-              <th>學號 ID</th>
-              <th>班級 Class</th>
-              <th>座號 No.</th>
-              <th>姓名 Name</th>`;
-            assessmentItems.forEach(item => {
-              headerHtml += `<th>${item}</th>`;
-            });
-            headerHtml += `<th style="color: var(--primary);">總平均 AVG</th></tr>`;
-            thead.innerHTML = headerHtml;
-
-            let studentMatrix = {};
-            data.forEach(row => {
-              if (!studentMatrix[row.STU_ID]) {
-                studentMatrix[row.STU_ID] = {
-                  id: row.STU_ID,
-                  name: row.STU_NAME,
-                  className: row.CLASS_NAME,
-                  seatNum: row.SEAT_NUM,
-                  grades: {}
-                };
-              }
-              studentMatrix[row.STU_ID].grades[row.AST_NAME] = row.SCORE;
-            });
-
-            Object.values(studentMatrix).forEach(student => {
-              let rowHtml = `<tr>
-                <td style="font-weight:700;">${student.id}</td>
-                <td>${student.className}</td>
-                <td>${student.seatNum}</td>
-                <td style="font-weight:700;">${student.name}</td>`;
-              
-              let totalScore = 0;
-              let assessCount = assessmentItems.length;
-
-              assessmentItems.forEach(item => {
-                let scoreValue = student.grades[item] !== undefined ? student.grades[item] : '';
-                if(scoreValue !== '') totalScore += parseFloat(scoreValue);
-                rowHtml += `<td><input type="number" class="score-input" value="${scoreValue}" oninput="calculateRowAverage(this)"></td>`;
-              });
-              
-              let initialAvg = assessCount > 0 ? (totalScore / assessCount).toFixed(1) : 0;
-              rowHtml += `<td class="avg-display">${initialAvg}</td>`;
-              
-              rowHtml += `</tr>`;
-              tbody.innerHTML += rowHtml;
-            });
-
-          } else {
-            data.forEach(item => {
-              if (type === 'roster') {
-                tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td></tr>`;
-              } else if (type === 'portfolios') {
-                tbody.innerHTML += `<tr><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td style="font-weight:700;">${item.STU_NAME}</td><td>${item.PORT_NAME}</td><td><a href="${item.PORT_LINK}" class="link-style" target="_blank">View File</a></td><td>${item.UPLOAD_DATE}</td></tr>`;
-              }
-            });
-          }
-        })
-        .catch(() => tbody.innerHTML = '<tr><td style="color:#c48a7e; text-align: center; padding: 20px;">資料讀取失敗，請確認後端已更新</td></tr>');
+  
+    function addStudentFrontend() {
+      const input = document.getElementById('add-student-input');
+      const value = input.value.trim();
+      if (!value) { alert("請先輸入要新增的資料！"); return; }
+      let parts = value.split(/[,，\s]+/);
+      let id = parts[0], className = parts[1] || "光子學程", seatNum = parts[2] || Math.floor(1 + Math.random() * 40), name = parts[3] || parts[0];
+      if (parts.length === 1) { id = "S" + Math.floor(15000 + Math.random() * 500); name = parts[0]; }
+      const tbody = document.getElementById('students-tbody');
+      if (tbody.innerHTML.includes("等待資料載入")) tbody.innerHTML = '';
+      tbody.innerHTML = `<tr><td style="font-weight:700;">${id}</td><td>${className}</td><td>${seatNum}</td><td style="font-weight:700;">${name}</td></tr>` + tbody.innerHTML;
+      input.value = ''; alert(`🎉 成功在前端動態掛載新學生：${name}！`);
     }
 
    
-    window.onload = () => {
-      fetch(`${baseUrl}/`).catch(err => console.log("Render server warming up..."));
-      fetchStudentsFromAPI();
-      fetchCoursesFromAPI(); 
-    };
+    function addCourseFrontend() {
+      const input = document.getElementById('add-course-input');
+      const value = input.value.trim();
+      if (!value) { alert("請先輸入要新增的課程資料！"); return; }
 
-    function fetchStudentsFromAPI() {
-      const tbody = document.getElementById('students-tbody');
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>';
-      fetch(`${baseUrl}/students`).then(res => res.json()).then(data => {
-        tbody.innerHTML = '';
-        data.forEach(item => {
-          tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td></tr>`;
-        });
-      }).catch(()=> tbody.innerHTML = '<tr><td colspan="4" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>');
-    }
+    
+      let parts = value.split(/[,，\s]+/);
+      
+      let code = parts[0];
+      let name = parts[1] || parts[0]; // 如果沒輸入名稱，就預設跟代碼一樣
+      let semester = parts[2] || "114-1"; // 如果沒輸入學期，就預設 114-1
 
-    function fetchCoursesFromAPI() {
+   
+      if (parts.length === 1) {
+        code = "C" + Math.floor(100 + Math.random() * 800); // 產生 C100~C899 的代碼
+        name = parts[0];
+      }
+
       const tbody = document.getElementById('courses-tbody');
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>';
-      fetch(`${baseUrl}/courses`).then(res => res.json()).then(data => {
-        tbody.innerHTML = '';
-        data.forEach(item => {
-          tbody.innerHTML += `<tr><td style="font-weight:700;">${item.COURSE_ID}</td><td>${item.COURSE_NAME}</td><td>${item.SEMESTER}</td><td><button class="action-btn" onclick="enterCourse('${item.COURSE_ID}', '${item.COURSE_NAME}')">Manage</button></td></tr>`;
-        });
-      }).catch(()=> tbody.innerHTML = '<tr><td colspan="4" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>');
+      if (tbody.innerHTML.includes("等待資料載入")) tbody.innerHTML = '';
+
+     
+      tbody.innerHTML = `<tr>
+        <td style="font-weight:700;">${code}</td>
+        <td>${name}</td>
+        <td>${semester}</td>
+        <td><button class="action-btn" onclick="enterCourse('${code}', '${name}')">Manage</button></td>
+      </tr>` + tbody.innerHTML;
+
+      input.value = ''; // 清空輸入框
+      alert(`🎉 成功在前端動態掛載新課程：${name}！`);
     }
+
+
+    // Fetch
+    function fetchCourseData(courseId, type) { const tbody = document.getElementById(`${type}-tbody`); tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">資料載入中...</td></tr>`; fetch(`${baseUrl}/course/${courseId}/${type}`).then(res => res.json()).then(data => { tbody.innerHTML = ''; if(data.length === 0) { tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">目前沒有資料</td></tr>`; return; } if (type === 'scores') { const thead = document.getElementById('scores-thead'); thead.innerHTML = ''; let assessmentItems = []; data.forEach(row => { if (!assessmentItems.includes(row.AST_NAME)) { assessmentItems.push(row.AST_NAME); } }); let headerHtml = `<tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th>`; assessmentItems.forEach(item => { headerHtml += `<th>${item}</th>`; }); headerHtml += `<th style="color: var(--primary);">總平均 AVG</th></tr>`; thead.innerHTML = headerHtml; let studentMatrix = {}; data.forEach(row => { if (!studentMatrix[row.STU_ID]) { studentMatrix[row.STU_ID] = { id: row.STU_ID, name: row.STU_NAME, className: row.CLASS_NAME, seatNum: row.SEAT_NUM, grades: {} }; } studentMatrix[row.STU_ID].grades[row.AST_NAME] = row.SCORE; }); Object.values(studentMatrix).forEach(student => { let rowHtml = `<tr><td style="font-weight:700;">${student.id}</td><td>${student.className}</td><td>${student.seatNum}</td><td style="font-weight:700;">${student.name}</td>`; let totalScore = 0; let assessCount = assessmentItems.length; assessmentItems.forEach(item => { let scoreValue = student.grades[item] !== undefined ? student.grades[item] : ''; if(scoreValue !== '') totalScore += parseFloat(scoreValue); rowHtml += `<td><input type="number" class="score-input" value="${scoreValue}" oninput="calculateRowAverage(this)"></td>`; }); let initialAvg = assessCount > 0 ? (totalScore / assessCount).toFixed(1) : 0; rowHtml += `<td class="avg-display">${initialAvg}</td>`; rowHtml += `</tr>`; tbody.innerHTML += rowHtml; }); } else { data.forEach(item => { if (type === 'roster') { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td></tr>`; } else if (type === 'portfolios') { tbody.innerHTML += `<tr><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td style="font-weight:700;">${item.STU_NAME}</td><td>${item.PORT_NAME}</td><td><a href="${item.PORT_LINK}" class="link-style" target="_blank">View File</a></td><td>${item.UPLOAD_DATE}</td></tr>`; } }); } }).catch(() => tbody.innerHTML = '<tr><td style="color:#c48a7e; text-align: center; padding: 20px;">資料讀取失敗，請確認後端已更新</td></tr>'); }
+    window.onload = () => { fetch(`${baseUrl}/`).catch(err => console.log("Render server warming up...")); fetchStudentsFromAPI(); fetchCoursesFromAPI(); };
+    function fetchStudentsFromAPI() { const tbody = document.getElementById('students-tbody'); tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>'; fetch(`${baseUrl}/students`).then(res => res.json()).then(data => { tbody.innerHTML = ''; data.forEach(item => { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td></tr>`; }); }).catch(()=> tbody.innerHTML = '<tr><td colspan="4" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>'); }
+    function fetchCoursesFromAPI() { const tbody = document.getElementById('courses-tbody'); tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>'; fetch(`${baseUrl}/courses`).then(res => res.json()).then(data => { tbody.innerHTML = ''; data.forEach(item => { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.COURSE_ID}</td><td>${item.COURSE_NAME}</td><td>${item.SEMESTER}</td><td><button class="action-btn" onclick="enterCourse('${item.COURSE_ID}', '${item.COURSE_NAME}')">Manage</button></td></tr>`; }); }).catch(()=> tbody.innerHTML = '<tr><td colspan="4" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>'); }
   </script>
 </body>
 </html>
