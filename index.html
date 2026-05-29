@@ -200,7 +200,7 @@
       width: 260px;
       padding: 10px 20px;
       border: 1px solid var(--border);
-      border-radius: 20px; /* 完美大圓角 */
+      border-radius: 20px; 
       font-family: 'Lato', sans-serif;
       color: var(--text-main);
       background-color: var(--bg-main);
@@ -252,9 +252,9 @@
 
   <aside class="sidebar-left">
     <div class="sys-title">校務系統</div>
-    <button class="nav-btn active" id="btn-students" onclick="switchMainView('students', this)">Students / 學生名條</button>
-    <button class="nav-btn" id="btn-courses" onclick="switchMainView('courses', this)">Courses / 課程管理</button>
-    <button class="nav-btn" id="btn-upload" onclick="switchMainView('upload', this)">Upload / 資料上傳</button>
+    <button class="nav-btn active" id="btn-students" onclick="switchMainView('students', this)">學生名條</button>
+    <button class="nav-btn" id="btn-courses" onclick="switchMainView('courses', this)">課程管理</button>
+    <button class="nav-btn" id="btn-upload" onclick="switchMainView('upload', this)">資料上傳</button>
   </aside>
 
   <main class="main-content">
@@ -276,7 +276,7 @@
     <div id="view-courses" class="view-section">
       <h2>Featured Courses</h2>
       <div class="action-toolbar">
-        <button class="action-btn" onclick="fetchCoursesFromAPI()">Reload Courses</button>
+        <button class="action-btn" onclick="fetchCoursesFromAPI()">重新整理</button>
         <div class="toolbar-spacer"></div>
         <input type="text" id="add-course-input" class="round-search-input" placeholder="請輸入課程代碼、名稱、學期...">
         <button class="action-btn action-btn-solid" onclick="addCourseFrontend()">新增資料</button>
