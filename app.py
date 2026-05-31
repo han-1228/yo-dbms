@@ -259,5 +259,85 @@ def get_course_portfolios(course_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/students/<stu_id>', methods=['DELETE'])
+def delete_student(stu_id):
+    try:
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        # 開始交易，先刪除從屬資料以避免 FK 錯誤
+        conn.start_transaction()
+        cur.execute("DELETE FROM Scores WHERE STU_ID = %s", (stu_id,))
+        scores_deleted = cur.rowcount
+        cur.execute("DELETE FROM Portfolios WHERE STU_ID = %s", (stu_id,))
+        portfolios_deleted = cur.rowcount
+        cur.execute("DELETE FROM Enrollments WHERE STU_ID = %s", (stu_id,))
+        enrollments_deleted = cur.rowcount
+        cur.execute("DELETE FROM Students WHERE STU_ID = %s", (stu_id,))
+        students_deleted = cur.rowcount
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({
+            "ok": True,
+            "deleted": {
+                "students": students_deleted,
+                "enrollments": enrollments_deleted,
+                "scores": scores_deleted,
+                "portfolios": portfolios_deleted
+            }
+        }), 200
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/courses/<course_id>', methods=['DELETE'])
+def delete_course(course_id):
+    try:
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        conn.start_transaction()
+        # 刪除作品與修課紀錄直接關聯到課程
+        cur.execute("DELETE FROM Portfolios WHERE COURSE_ID = %s", (course_id,))
+        portfolios_deleted = cur.rowcount
+        cur.execute("DELETE FROM Enrollments WHERE COURSE_ID = %s", (course_id,))
+        enrollments_deleted = cur.rowcount
+        # 先找出該課程的評量項目，再刪除對應的成績
+        cur.execute("SELECT AST_ID FROM Assessments WHERE COURSE_ID = %s", (course_id,))
+        ast_rows = cur.fetchall()
+        ast_ids = [r[0] for r in ast_rows]
+        scores_deleted = 0
+        if ast_ids:
+            placeholders = ','.join(['%s'] * len(ast_ids))
+            cur.execute(f"DELETE FROM Scores WHERE AST_ID IN ({placeholders})", tuple(ast_ids))
+            scores_deleted = cur.rowcount
+        # 刪除評量項目
+        cur.execute("DELETE FROM Assessments WHERE COURSE_ID = %s", (course_id,))
+        assessments_deleted = cur.rowcount
+        # 最後刪除課程
+        cur.execute("DELETE FROM Courses WHERE COURSE_ID = %s", (course_id,))
+        courses_deleted = cur.rowcount
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({
+            "ok": True,
+            "deleted": {
+                "courses": courses_deleted,
+                "assessments": assessments_deleted,
+                "scores": scores_deleted,
+                "enrollments": enrollments_deleted,
+                "portfolios": portfolios_deleted
+            }
+        }), 200
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
