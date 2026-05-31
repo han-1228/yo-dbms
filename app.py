@@ -339,5 +339,35 @@ def delete_course(course_id):
             pass
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/diag', methods=['GET'])
+def api_diag():
+    """回傳目前 Flask 註冊的路由清單，供部署診斷使用。"""
+    try:
+        routes = []
+        for rule in app.url_map.iter_rules():
+            routes.append({
+                'rule': str(rule),
+                'endpoint': rule.endpoint,
+                'methods': sorted(list(rule.methods))
+            })
+        return jsonify({'routes': routes}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/echo', methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+def api_echo():
+    """回顯請求資訊（method/path/query/headers/body），方便外部測試路由是否可達。"""
+    try:
+        data = {
+            'method': request.method,
+            'path': request.path,
+            'query': request.args.to_dict(),
+            'headers': dict(request.headers),
+            'json': request.get_json(silent=True)
+        }
+        return jsonify({'echo': data}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
