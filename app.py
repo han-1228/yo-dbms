@@ -1,107 +1,262 @@
 import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import sqlite3
+import mysql.connector
+from dotenv import load_dotenv
 import csv
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-DB_FILE = 'yo-dbms.db'
+# 使用專案目錄作為基準路徑，確保在不同工作目錄下仍能正確找到 CSV 與憑證
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-def get_db_connection():
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row 
-    return conn
+def get_mysql_connection():
+    host = os.getenv('DB_HOST', 'mysql-1af924e-yo-dbms.i.aivencloud.com')
+    port = int(os.getenv('DB_PORT', 25889))
+    user = os.getenv('DB_USER', 'avnadmin')
+    password = os.getenv('DB_PASSWORD', 'my_password')
+    database = os.getenv('DB_NAME', 'schoolsystemdb')
+    ssl_ca_path = os.path.join(BASE_DIR, 'ca.pem')
 
-def init_db_from_csv():
-    if os.path.exists(DB_FILE):
-        os.remove(DB_FILE)
-        
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-   
-    cursor.executescript("""
-        CREATE TABLE IF NOT EXISTS Students (
-            STU_ID VARCHAR(10) PRIMARY KEY, STU_NAME VARCHAR(50), CLASS_NAME VARCHAR(20), SEAT_NUM INT
-        );
-        CREATE TABLE IF NOT EXISTS Courses (
-            COURSE_ID VARCHAR(10) PRIMARY KEY, COURSE_NAME VARCHAR(100), SEMESTER VARCHAR(20)
-        );
-        CREATE TABLE IF NOT EXISTS Enrollments (
-            ENROLL_ID VARCHAR(10) PRIMARY KEY, 
-            STU_ID VARCHAR(10), COURSE_ID VARCHAR(10),
-            FOREIGN KEY (STU_ID) REFERENCES Students(STU_ID),
-            FOREIGN KEY (COURSE_ID) REFERENCES Courses(COURSE_ID)
-        );
-        CREATE TABLE IF NOT EXISTS Assessments (
-            AST_ID VARCHAR(10) PRIMARY KEY, COURSE_ID VARCHAR(10), AST_NAME VARCHAR(100), CATEGORY VARCHAR(50), WEIGHT INT,
-            FOREIGN KEY (COURSE_ID) REFERENCES Courses(COURSE_ID)
-        );
-        CREATE TABLE IF NOT EXISTS Scores (
-            SCORE_ID VARCHAR(10) PRIMARY KEY, STU_ID VARCHAR(10), AST_ID VARCHAR(10), SCORE INT,
-            FOREIGN KEY (STU_ID) REFERENCES Students(STU_ID),
-            FOREIGN KEY (AST_ID) REFERENCES Assessments(AST_ID)
-        );
-        CREATE TABLE IF NOT EXISTS Portfolios (
-            PORT_ID VARCHAR(10) PRIMARY KEY, STU_ID VARCHAR(10), COURSE_ID VARCHAR(10), PORT_NAME VARCHAR(100), PORT_LINK VARCHAR(255), UPLOAD_DATE VARCHAR(20),
-            FOREIGN KEY (STU_ID) REFERENCES Students(STU_ID),
-            FOREIGN KEY (COURSE_ID) REFERENCES Courses(COURSE_ID)
-        );
-    """)
-    
-  
-    files_to_import = {
-        'students.csv': "INSERT OR IGNORE INTO Students VALUES (?, ?, ?, ?)",
-        'courses.csv': "INSERT OR IGNORE INTO Courses VALUES (?, ?, ?)",
-        'enrollments.csv': "INSERT OR IGNORE INTO Enrollments VALUES (?, ?, ?)",
-        'assessments.csv': "INSERT OR IGNORE INTO Assessments VALUES (?, ?, ?, ?, ?)",
-        'scores.csv': "INSERT OR IGNORE INTO Scores VALUES (?, ?, ?, ?)",
-        'portfolios.csv': "INSERT OR IGNORE INTO Portfolios VALUES (?, ?, ?, ?, ?, ?)"
+    conn_kwargs = {
+        'host': host,
+        'port': port,
+        'user': user,
+        'password': password,
+        'database': database
     }
+    if os.path.exists(ssl_ca_path):
+        conn_kwargs['ssl_ca'] = ssl_ca_path
 
-    for filename, query in files_to_import.items():
-        if os.path.exists(filename):
-            with open(filename, 'r', encoding='utf-8-sig') as f:
-                reader = csv.reader(f)
-                next(reader, None)
-                for row in reader:
-                    if row:
-                        try:
-                            param_count = query.count('?')
-                            cursor.execute(query, row[:param_count])
-                        except Exception as e:
-                            print(f"寫入 {filename} 時略過錯誤: {e}")
+    return mysql.connector.connect(**conn_kwargs)
 
-    conn.commit()
-    conn.close()
-    print("🎉 資料庫及 6 張表格全數建立並匯入完成！")
+def import_csv_to_mysql(cursor, table_name, file_path, sql_query):
+    print(f"正在匯入 {table_name}...")
+    if not os.path.exists(file_path):
+        print(f"❌ 找不到檔案：{file_path}，跳過此表。")
+        return
 
-init_db_from_csv()
+    param_count = sql_query.count('%s')
+
+    try:
+        with open(file_path, mode='r', encoding='utf-8-sig') as f:
+            reader = csv.reader(f)
+            next(reader, None)
+            records = []
+            for row in reader:
+                if not any(row):
+                    continue
+                processed = (row + [None] * param_count)[:param_count]
+                processed = [None if str(v).strip() == '' else v for v in processed]
+                records.append(tuple(processed))
+
+            if records:
+                cursor.executemany(sql_query, records)
+                print(f"✅ {table_name} 匯入成功！共 {cursor.rowcount} 筆資料。")
+            else:
+                print(f"⚠️ {file_path} 裡面沒有資料（或是只有標題）。")
+    except mysql.connector.Error as err:
+        print(f"❌ {table_name} 匯入失敗。錯誤原因: {err}")
+    except Exception as e:
+        print(f"❌ {table_name} 發生未知的錯誤: {e}")
+
+
+def init_db_from_csv_mysql():
+    try:
+        conn = get_mysql_connection()
+        cursor = conn.cursor()
+
+        # 建表（若不存在）
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Students (
+                STU_ID VARCHAR(50) PRIMARY KEY,
+                STU_NAME VARCHAR(200),
+                CLASS_NAME VARCHAR(100),
+                SEAT_NUM INT
+            ) ENGINE=InnoDB;
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Courses (
+                COURSE_ID VARCHAR(50) PRIMARY KEY,
+                COURSE_NAME VARCHAR(255),
+                SEMESTER VARCHAR(50)
+            ) ENGINE=InnoDB;
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Enrollments (
+                ENROLL_ID VARCHAR(50) PRIMARY KEY,
+                STU_ID VARCHAR(50),
+                COURSE_ID VARCHAR(50),
+                FOREIGN KEY (STU_ID) REFERENCES Students(STU_ID),
+                FOREIGN KEY (COURSE_ID) REFERENCES Courses(COURSE_ID)
+            ) ENGINE=InnoDB;
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Assessments (
+                AST_ID VARCHAR(50) PRIMARY KEY,
+                COURSE_ID VARCHAR(50),
+                AST_NAME VARCHAR(255),
+                CATEGORY VARCHAR(100),
+                WEIGHT INT,
+                FOREIGN KEY (COURSE_ID) REFERENCES Courses(COURSE_ID)
+            ) ENGINE=InnoDB;
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Scores (
+                SCORE_ID VARCHAR(50) PRIMARY KEY,
+                STU_ID VARCHAR(50),
+                AST_ID VARCHAR(50),
+                SCORE INT,
+                FOREIGN KEY (STU_ID) REFERENCES Students(STU_ID),
+                FOREIGN KEY (AST_ID) REFERENCES Assessments(AST_ID)
+            ) ENGINE=InnoDB;
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Portfolios (
+                PORTFO_ID VARCHAR(50) PRIMARY KEY,
+                STU_ID VARCHAR(50),
+                COURSE_ID VARCHAR(50),
+                AST_ID VARCHAR(50),
+                TITLE VARCHAR(255),
+                UPLOAD_DATE VARCHAR(50),
+                FILE_URL VARCHAR(255),
+                FOREIGN KEY (STU_ID) REFERENCES Students(STU_ID),
+                FOREIGN KEY (COURSE_ID) REFERENCES Courses(COURSE_ID),
+                FOREIGN KEY (AST_ID) REFERENCES Assessments(AST_ID)
+            ) ENGINE=InnoDB;
+        """)
+
+        # 匯入 CSV（以 BASE_DIR 為根目錄）
+        files_to_import = [
+            ("Students", os.path.join(BASE_DIR, 'students.csv'),
+             "INSERT IGNORE INTO Students (STU_ID, STU_NAME, CLASS_NAME, SEAT_NUM) VALUES (%s, %s, %s, %s)"),
+            ("Courses", os.path.join(BASE_DIR, 'courses.csv'),
+             "INSERT IGNORE INTO Courses (COURSE_ID, COURSE_NAME, SEMESTER) VALUES (%s, %s, %s)"),
+            ("Enrollments", os.path.join(BASE_DIR, 'enrollments.csv'),
+             "INSERT IGNORE INTO Enrollments (ENROLL_ID, STU_ID, COURSE_ID) VALUES (%s, %s, %s)"),
+            ("Assessments", os.path.join(BASE_DIR, 'assessments.csv'),
+             "INSERT IGNORE INTO Assessments (AST_ID, COURSE_ID, AST_NAME, CATEGORY, WEIGHT) VALUES (%s, %s, %s, %s, %s)"),
+            ("Scores", os.path.join(BASE_DIR, 'scores.csv'),
+             "INSERT IGNORE INTO Scores (SCORE_ID, STU_ID, AST_ID, SCORE) VALUES (%s, %s, %s, %s)"),
+            ("Portfolios", os.path.join(BASE_DIR, 'portfolios.csv'),
+             "INSERT IGNORE INTO Portfolios (PORTFO_ID, STU_ID, COURSE_ID, AST_ID, TITLE, UPLOAD_DATE, FILE_URL) VALUES (%s, %s, %s, %s, %s, %s, %s)")
+        ]
+
+        for table_name, path, query in files_to_import:
+            if os.path.exists(path):
+                import_csv_to_mysql(cursor, table_name, path, query)
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("🎉 MySQL 資料庫表格建立並匯入完成！")
+    except mysql.connector.Error as e:
+        print(f"MySQL 連線或操作失敗: {e}")
+
+# 初始化（建立表格並匯入 CSV）
+init_db_from_csv_mysql()
+
+# helper: 將 cursor.fetchall() 與 column_names 轉為 list[dict]
+def rows_to_dicts(cursor, rows):
+    cols = cursor.column_names
+    return [dict(zip(cols, row)) for row in rows]
 
 @app.route('/', methods=['GET'])
 def home():
-    return jsonify({"message": "API 伺服器正常運作中！"}), 200
+    return jsonify({"message": "API 伺服器（MySQL）正常運作中！"}), 200
 
 @app.route('/api/students', methods=['GET'])
 def get_students():
+    try:
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT STU_ID, STU_NAME, CLASS_NAME, SEAT_NUM FROM Students")
+        rows = cur.fetchall()
+        data = rows_to_dicts(cur, rows)
+        cur.close()
+        conn.close()
+        return jsonify(data), 200
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/courses', methods=['GET'])
 def get_courses():
+    try:
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT COURSE_ID, COURSE_NAME, SEMESTER FROM Courses")
+        rows = cur.fetchall()
+        data = rows_to_dicts(cur, rows)
+        cur.close()
+        conn.close()
+        return jsonify(data), 200
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/course/<course_id>/roster', methods=['GET'])
 def get_course_roster(course_id):
+    try:
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT s.STU_ID, s.STU_NAME, s.CLASS_NAME, s.SEAT_NUM FROM Enrollments e JOIN Students s ON e.STU_ID = s.STU_ID WHERE e.COURSE_ID = %s",
+            (course_id,)
+        )
+        rows = cur.fetchall()
+        data = rows_to_dicts(cur, rows)
+        cur.close()
+        conn.close()
+        return jsonify(data), 200
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/course/<course_id>/scores', methods=['GET'])
 def get_course_scores(course_id):
+    try:
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT sc.SCORE_ID, sc.STU_ID, st.STU_NAME, sc.AST_ID, a.AST_NAME, sc.SCORE "
+            "FROM Scores sc "
+            "JOIN Students st ON sc.STU_ID = st.STU_ID "
+            "JOIN Assessments a ON sc.AST_ID = a.AST_ID "
+            "WHERE a.COURSE_ID = %s",
+            (course_id,)
+        )
+        rows = cur.fetchall()
+        data = rows_to_dicts(cur, rows)
+        cur.close()
+        conn.close()
+        return jsonify(data), 200
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/course/<course_id>/portfolios', methods=['GET'])
 def get_course_portfolios(course_id):
+    try:
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT p.PORTFO_ID, p.STU_ID, s.STU_NAME, p.COURSE_ID, p.AST_ID, p.TITLE, p.FILE_URL, p.UPLOAD_DATE "
+            "FROM Portfolios p "
+            "JOIN Students s ON p.STU_ID = s.STU_ID "
+            "WHERE p.COURSE_ID = %s",
+            (course_id,)
+        )
+        rows = cur.fetchall()
+        data = rows_to_dicts(cur, rows)
+        cur.close()
+        conn.close()
+        return jsonify(data), 200
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
