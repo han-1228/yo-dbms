@@ -435,9 +435,37 @@
 
     function fetchCoursesFromAPI() { const tbody = document.getElementById('courses-tbody'); tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>'; fetch(`${baseUrl}/courses`).then(res => res.json()).then(data => { tbody.innerHTML = ''; if(data.length === 0){ tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#a0a0a0; padding:30px;">目前沒有資料</td></tr>'; return;} data.forEach(item => { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.COURSE_ID}</td><td>${item.COURSE_NAME}</td><td>${item.SEMESTER}</td><td><button class="action-btn" onclick="enterCourse('${item.COURSE_ID}', '${item.COURSE_NAME}')">Manage</button> <button class="action-btn" onclick="fetchDeleteCourse('${item.COURSE_ID}')">刪除</button></td></tr>`; }); }).catch(()=> tbody.innerHTML = '<tr><td colspan="4" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>'); }
 
-    async function fetchDeleteStudent(stuId){ if(!confirm(`確定要刪除學生 ${stuId} 嗎？此操作不可復原。`)) return; try{ const res = await fetch(`${baseUrl}/students/${stuId}`, { method: 'DELETE' }); if(!res.ok){ const txt = await res.text().catch(()=>null); throw new Error(txt || `伺服器回應 ${res.status}`); } const json = await res.json(); alert(`刪除完成：${JSON.stringify(json.deleted)}`); fetchStudentsFromAPI(); if(currentCourseId) fetchCourseData(currentCourseId, 'roster'); }catch(err){ alert(`刪除失敗：${err.message || err}`); } }
+    async function fetchDeleteStudent(stuId){
+      // 第一次確認
+      if(!confirm(`⚠️ 此操作會刪除學生 ${stuId} 以及所有相關資料。請先確認是否要進行。`)) return;
+      // 第二次確認（更強烈的警告）
+      if(!confirm(`再次確認：您確定要永久刪除學生 ${stuId} 嗎？此動作不可復原。按 [確定] 將立即刪除。`)) return;
 
-    async function fetchDeleteCourse(courseId){ if(!confirm(`確定要刪除課程 ${courseId} 以及其相關資料嗎？此操作不可復原。`)) return; try{ const res = await fetch(`${baseUrl}/courses/${courseId}`, { method: 'DELETE' }); if(!res.ok){ const txt = await res.text().catch(()=>null); throw new Error(txt || `伺服器回應 ${res.status}`); } const json = await res.json(); alert(`刪除完成：${JSON.stringify(json.deleted)}`); fetchCoursesFromAPI(); if(currentCourseId === courseId){ switchMainView('courses'); currentCourseId = ''; } }catch(err){ alert(`刪除失敗：${err.message || err}`); } }
+      try{
+        const res = await fetch(`${baseUrl}/students/${stuId}`, { method: 'DELETE' });
+        if(!res.ok){ const txt = await res.text().catch(()=>null); throw new Error(txt || `伺服器回應 ${res.status}`); }
+        const json = await res.json();
+        alert(`刪除完成：${JSON.stringify(json.deleted)}`);
+        fetchStudentsFromAPI();
+        if(currentCourseId) fetchCourseData(currentCourseId, 'roster');
+      }catch(err){ alert(`刪除失敗：${err.message || err}`); }
+    }
+
+    async function fetchDeleteCourse(courseId){
+      // 第一次確認
+      if(!confirm(`⚠️ 此操作會刪除課程 ${courseId} 與其所有相關資料（評量、成績、作品、修課紀錄）。請先確認是否要進行。`)) return;
+      // 第二次確認（更強烈的警告）
+      if(!confirm(`再次確認：您確定要永久刪除課程 ${courseId} 以及其相關資料嗎？此動作不可復原。按 [確定] 將立即刪除。`)) return;
+
+      try{
+        const res = await fetch(`${baseUrl}/courses/${courseId}`, { method: 'DELETE' });
+        if(!res.ok){ const txt = await res.text().catch(()=>null); throw new Error(txt || `伺服器回應 ${res.status}`); }
+        const json = await res.json();
+        alert(`刪除完成：${JSON.stringify(json.deleted)}`);
+        fetchCoursesFromAPI();
+        if(currentCourseId === courseId){ switchMainView('courses'); currentCourseId = ''; }
+      }catch(err){ alert(`刪除失敗：${err.message || err}`); }
+    }
   </script>
 </body>
 </html>
