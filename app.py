@@ -224,7 +224,7 @@ def get_course_scores(course_id):
         conn = get_mysql_connection()
         cur = conn.cursor()
         cur.execute(
-            "SELECT sc.SCORE_ID, sc.STU_ID, st.STU_NAME, sc.AST_ID, a.AST_NAME, sc.SCORE "
+            "SELECT sc.SCORE_ID, sc.STU_ID, st.STU_NAME, st.CLASS_NAME, st.SEAT_NUM, sc.AST_ID, a.AST_NAME, sc.SCORE "
             "FROM Scores sc "
             "JOIN Students st ON sc.STU_ID = st.STU_ID "
             "JOIN Assessments a ON sc.AST_ID = a.AST_ID "
