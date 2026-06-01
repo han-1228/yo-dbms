@@ -4,6 +4,8 @@ from flask_cors import CORS
 import mysql.connector
 from dotenv import load_dotenv
 import csv
+import time
+import random
 
 load_dotenv()
 
@@ -103,7 +105,7 @@ def init_db_from_csv_mysql():
                 COURSE_ID VARCHAR(50),
                 AST_NAME VARCHAR(255),
                 CATEGORY VARCHAR(100),
-                WEIGHT INT,
+                WEIGHT FLOAT,
                 FOREIGN KEY (COURSE_ID) REFERENCES Courses(COURSE_ID)
             ) ENGINE=InnoDB;
         """)
@@ -482,6 +484,113 @@ def search_students():
         conn.close()
         return jsonify(data), 200
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/course/<course_id>/assessments', methods=['GET'])
+def get_course_assessments(course_id):
+    try:
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT AST_ID, COURSE_ID, AST_NAME, WEIGHT FROM Assessments WHERE COURSE_ID = %s", (course_id,))
+        rows = cur.fetchall()
+        data = rows_to_dicts(cur, rows)
+        cur.close()
+        conn.close()
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/course/<course_id>/assessments/<ast_id>', methods=['PATCH'])
+def update_assessment_weight(course_id, ast_id):
+    try:
+        payload = request.get_json(silent=True) or {}
+        if 'weight' not in payload:
+            return jsonify({'error': 'weight is required'}), 400
+        try:
+            weight = float(payload.get('weight'))
+        except:
+            return jsonify({'error': 'invalid weight'}), 400
+        if weight < 0 or weight > 1:
+            return jsonify({'error': 'weight must be between 0 and 1'}), 400
+
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE Assessments SET WEIGHT = %s WHERE AST_ID = %s AND COURSE_ID = %s", (weight, ast_id, course_id))
+        updated = cur.rowcount
+        # 計算此課程目前總權重
+        cur.execute("SELECT IFNULL(SUM(WEIGHT),0) FROM Assessments WHERE COURSE_ID = %s", (course_id,))
+        total = cur.fetchone()[0]
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'ok': True, 'updated': updated, 'total_weight': float(total)}), 200
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/course/<course_id>/scores', methods=['POST'])
+def save_course_scores(course_id):
+    """接收 JSON 陣列，每個 item 包含 STU_ID, AST_ID, SCORE，選擇性包含 SCORE_ID。
+    會驗證 AST_ID 是否屬於 course_id，並對成績做更新或新增（upsert）。
+    回傳已新增與已更新的筆數。
+    """
+    try:
+        data = request.get_json(silent=True)
+        if not isinstance(data, list):
+            return jsonify({'error': 'expected a JSON array'}), 400
+
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        inserted = 0
+        updated = 0
+
+        for item in data:
+            stu_id = item.get('STU_ID')
+            ast_id = item.get('AST_ID')
+            score_val = item.get('SCORE')
+            score_id = item.get('SCORE_ID')
+            if stu_id is None or ast_id is None or score_val is None:
+                continue
+
+            # 驗證該 AST_ID 是否屬於此課程
+            cur.execute("SELECT AST_ID FROM Assessments WHERE AST_ID = %s AND COURSE_ID = %s", (ast_id, course_id))
+            if cur.fetchone() is None:
+                # skip 不屬於此課程的評量
+                continue
+
+            # 若提供 SCORE_ID，優先以其為主
+            if score_id:
+                cur.execute("SELECT SCORE_ID FROM Scores WHERE SCORE_ID = %s", (score_id,))
+                if cur.fetchone():
+                    cur.execute("UPDATE Scores SET SCORE = %s, STU_ID = %s, AST_ID = %s WHERE SCORE_ID = %s", (score_val, stu_id, ast_id, score_id))
+                    updated += cur.rowcount
+                else:
+                    cur.execute("INSERT INTO Scores (SCORE_ID, STU_ID, AST_ID, SCORE) VALUES (%s, %s, %s, %s)", (score_id, stu_id, ast_id, score_val))
+                    inserted += cur.rowcount
+            else:
+                # 以 (STU_ID, AST_ID) 嘗試更新，否則新增
+                cur.execute("SELECT SCORE_ID FROM Scores WHERE STU_ID = %s AND AST_ID = %s", (stu_id, ast_id))
+                row = cur.fetchone()
+                if row:
+                    cur.execute("UPDATE Scores SET SCORE = %s WHERE STU_ID = %s AND AST_ID = %s", (score_val, stu_id, ast_id))
+                    updated += cur.rowcount
+                else:
+                    new_id = f"SC{int(time.time()*1000)}{random.randint(100,999)}"
+                    cur.execute("INSERT INTO Scores (SCORE_ID, STU_ID, AST_ID, SCORE) VALUES (%s, %s, %s, %s)", (new_id, stu_id, ast_id, score_val))
+                    inserted += cur.rowcount
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'ok': True, 'inserted': inserted, 'updated': updated}), 200
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

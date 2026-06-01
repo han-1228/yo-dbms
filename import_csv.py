@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 # 載入環境變數
 load_dotenv()
 
+# 使用檔案所在目錄作為基準路徑
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 def get_aiven_connection():
     return mysql.connector.connect(
         host='mysql-1af924e-yo-dbms.i.aivencloud.com',
@@ -82,10 +85,45 @@ def main():
         )
 
         # 4. 評量項目表 (從表，依賴課程)
-        import_csv_to_table(
-            cursor, "Assessments", "4.assessments.csv",
-            "INSERT IGNORE INTO Assessments (AST_ID, COURSE_ID, AST_NAME, CATEGORY, WEIGHT) VALUES (%s, %s, %s, %s, %s)"
-        )
+        # 先讀取 CSV，對同一 COURSE_ID 的 WEIGHT 做正規化（總和為 1），再寫入資料庫
+        assessments_path = os.path.join(BASE_DIR, '4.assessments.csv')
+        if os.path.exists(assessments_path):
+            with open(assessments_path, mode='r', encoding='utf-8-sig') as f:
+                reader = csv.reader(f)
+                next(reader, None)
+                rows = [r for r in reader if any(r)]
+            # group by course
+            by_course = {}
+            for r in rows:
+                ast_id = r[0]
+                course_id = r[1]
+                ast_name = r[2] if len(r) > 2 else None
+                category = r[3] if len(r) > 3 else None
+                try:
+                    weight = float(r[4]) if len(r) > 4 and r[4] != '' else 0.0
+                except:
+                    weight = 0.0
+                by_course.setdefault(course_id, []).append((ast_id, course_id, ast_name, category, weight))
+
+            for course_id, items in by_course.items():
+                total = sum(it[4] for it in items)
+                if total == 0:
+                    # 若所有權重為 0，平均分配
+                    n = len(items)
+                    norm_weights = [1.0 / n] * n
+                else:
+                    norm_weights = [it[4] / total for it in items]
+
+                insert_sql = "INSERT IGNORE INTO Assessments (AST_ID, COURSE_ID, AST_NAME, CATEGORY, WEIGHT) VALUES (%s, %s, %s, %s, %s)"
+                insert_rows = []
+                for idx, it in enumerate(items):
+                    insert_rows.append((it[0], it[1], it[2], it[3], norm_weights[idx]))
+
+                if insert_rows:
+                    cursor.executemany(insert_sql, insert_rows)
+                    print(f"✅ Assessments 匯入成功！（課程 {course_id}） 共 {cursor.rowcount} 筆資料。")
+        else:
+            print(f"❌ 找不到檔案：{assessments_path}，跳過此表。")
 
         # 5. 成績表 (從表，依賴學生與評量)
         import_csv_to_table(
