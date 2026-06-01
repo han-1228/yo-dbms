@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import csv
 import time
 import random
+import io
 
 load_dotenv()
 
@@ -677,6 +678,66 @@ def save_course_scores(course_id):
         cur.close()
         conn.close()
         return jsonify({'ok': True, 'inserted': inserted, 'updated': updated}), 200
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/upload', methods=['POST'])
+def api_upload():
+    """接受 multipart/form-data 的 CSV 上傳，參數: file, type。
+    type 可能為 students, courses, enrollments, assessments, scores, portfolios
+    將 CSV 解析後使用 INSERT IGNORE 匯入資料庫。
+    """
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'no file part'}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'no selected file'}), 400
+        ftype = (request.form.get('type') or '').lower()
+        allowed = {'students','courses','enrollments','assessments','scores','portfolios'}
+        if ftype not in allowed:
+            return jsonify({'error': 'invalid type parameter'}), 400
+
+        # 讀取 CSV 內容（支援 utf-8-sig）
+        stream = io.TextIOWrapper(file.stream, encoding='utf-8-sig')
+        reader = csv.reader(stream)
+        next(reader, None)
+
+        # 對應 SQL
+        mapping = {
+            'students': ("Students", "INSERT IGNORE INTO Students (STU_ID, STU_NAME, CLASS_NAME, SEAT_NUM) VALUES (%s, %s, %s, %s)"),
+            'courses': ("Courses", "INSERT IGNORE INTO Courses (COURSE_ID, COURSE_NAME, SEMESTER) VALUES (%s, %s, %s)"),
+            'enrollments': ("Enrollments", "INSERT IGNORE INTO Enrollments (ENROLL_ID, STU_ID, COURSE_ID) VALUES (%s, %s, %s)"),
+            'assessments': ("Assessments", "INSERT IGNORE INTO Assessments (AST_ID, COURSE_ID, AST_NAME, CATEGORY, WEIGHT) VALUES (%s, %s, %s, %s, %s)"),
+            'scores': ("Scores", "INSERT IGNORE INTO Scores (SCORE_ID, STU_ID, AST_ID, SCORE) VALUES (%s, %s, %s, %s)"),
+            'portfolios': ("Portfolios", "INSERT IGNORE INTO Portfolios (PORTFO_ID, STU_ID, COURSE_ID, AST_ID, TITLE, UPLOAD_DATE, FILE_URL) VALUES (%s, %s, %s, %s, %s, %s, %s)")
+        }
+
+        table_name, sql = mapping[ftype]
+        param_count = sql.count('%s')
+        records = []
+        for row in reader:
+            if not any(row):
+                continue
+            processed = (row + [None] * param_count)[:param_count]
+            processed = [None if str(v).strip() == '' else v for v in processed]
+            records.append(tuple(processed))
+
+        if not records:
+            return jsonify({'message': 'no data in csv'}), 200
+
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        cur.executemany(sql, records)
+        conn.commit()
+        inserted = cur.rowcount
+        cur.close()
+        conn.close()
+        return jsonify({'message': f'imported {inserted} rows into {table_name}'}), 200
     except Exception as e:
         try:
             conn.rollback()
