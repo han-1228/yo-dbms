@@ -92,16 +92,45 @@
     .view-section.active { display: block; animation: fadeIn 0.4s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
     
-    h2 { 
+    /* 💡 標題與迷你搜尋列的排版 */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+    }
+    .page-header h2 { 
       font-family: 'Playfair Display', "Songti TC", serif;
       font-size: 28px;
       font-weight: 600;
-      margin-top: 0; 
-      margin-bottom: 25px;
+      margin: 0; 
       color: #000000; 
       letter-spacing: 0.5px;
     }
     
+    /* 💡 迷你化搜尋列樣式 */
+    .header-search {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .header-search .round-search-select, 
+    .header-search .round-search-input {
+      font-size: 11px;
+      padding: 6px 12px;
+      height: 32px;
+      box-sizing: border-box;
+    }
+    .header-search .round-search-input {
+      width: 140px;
+    }
+    .header-search .action-btn {
+      font-size: 11px;
+      padding: 0 15px;
+      height: 32px;
+      line-height: 30px;
+    }
+
     table { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: left; font-size: 14px; }
     th, td { padding: 16px 12px; border-bottom: 1px solid var(--border); }
     th { 
@@ -116,30 +145,10 @@
     tbody tr:nth-child(even) { background-color: var(--bg-card); }
     tbody tr:hover { background-color: #f2e9e7; }
     
-    .course-tabs { 
-      display: flex; gap: 20px; 
-      margin-bottom: 30px; 
-      border-bottom: 1px solid var(--border); 
-      padding-bottom: 0; 
-    }
-    .tab-btn { 
-      padding: 10px 5px; 
-      border: none; 
-      background: transparent; 
-      cursor: pointer; 
-      font-family: 'Lato', sans-serif;
-      font-weight: 700; 
-      color: var(--text-muted); 
-      transition: 0.2s;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -1px; 
-    }
+    .course-tabs { display: flex; gap: 20px; margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 0; }
+    .tab-btn { padding: 10px 5px; border: none; background: transparent; cursor: pointer; font-family: 'Lato', sans-serif; font-weight: 700; color: var(--text-muted); transition: 0.2s; border-bottom: 2px solid transparent; margin-bottom: -1px; }
     .tab-btn:hover { color: var(--text-main); }
-    .tab-btn.active { 
-      color: var(--primary); 
-      border-bottom: 2px solid var(--primary); 
-    }
-    
+    .tab-btn.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
     .tab-content { display: none; }
     .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
 
@@ -166,68 +175,21 @@
       border-color: var(--primary);
       box-shadow: 0 6px 12px rgba(196, 138, 126, 0.2);
     }
+    .action-btn-solid { background-color: var(--primary); color: var(--bg-sidebar); border-color: var(--primary); }
+    .action-btn-solid:hover { background-color: var(--primary-hover); border-color: var(--primary-hover); }
     
-    .action-btn-solid {
-      background-color: var(--primary);
-      color: var(--bg-sidebar);
-      border-color: var(--primary);
-    }
-    .action-btn-solid:hover {
-      background-color: var(--primary-hover);
-      border-color: var(--primary-hover);
-    }
-
-    .btn-back {
-      background-color: transparent;
-      border: none;
-      box-shadow: none;
-      color: var(--text-muted);
-      padding: 0;
-      margin-bottom: 20px;
-      font-size: 14px;
-      text-transform: none;
-      letter-spacing: 0;
-    }
-    .btn-back:hover {
-      background-color: transparent;
-      color: var(--primary);
-      text-decoration: underline;
-    }
+    .btn-back { background-color: transparent; border: none; box-shadow: none; color: var(--text-muted); padding: 0; margin-bottom: 20px; font-size: 14px; text-transform: none; letter-spacing: 0; }
+    .btn-back:hover { background-color: transparent; color: var(--primary); text-decoration: underline; }
     
     .round-search-select {
-      padding: 10px 15px;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      font-family: 'Lato', sans-serif;
-      color: var(--text-main);
-      background-color: var(--bg-sidebar);
-      font-size: 13px;
-      cursor: pointer;
-      outline: none;
-      transition: all 0.3s;
+      padding: 10px 15px; border: 1px solid var(--border); border-radius: 20px; font-family: 'Lato', sans-serif; color: var(--text-main); background-color: var(--bg-sidebar); font-size: 13px; cursor: pointer; outline: none; transition: all 0.3s;
     }
-    .round-search-select:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 8px rgba(196, 138, 126, 0.15);
-    }
+    .round-search-select:focus { border-color: var(--primary); box-shadow: 0 0 8px rgba(196, 138, 126, 0.15); }
     
     .round-search-input {
-      width: 200px;
-      padding: 10px 20px;
-      border: 1px solid var(--border);
-      border-radius: 20px; 
-      font-family: 'Lato', sans-serif;
-      color: var(--text-main);
-      background-color: var(--bg-main);
-      font-size: 13px;
-      transition: all 0.3s;
+      padding: 10px 20px; border: 1px solid var(--border); border-radius: 20px; font-family: 'Lato', sans-serif; color: var(--text-main); background-color: var(--bg-main); font-size: 13px; transition: all 0.3s;
     }
-    .round-search-input:focus {
-      outline: none;
-      border-color: var(--primary);
-      background-color: var(--bg-sidebar);
-      box-shadow: 0 0 10px rgba(196, 138, 126, 0.15);
-    }
+    .round-search-input:focus { outline: none; border-color: var(--primary); background-color: var(--bg-sidebar); box-shadow: 0 0 10px rgba(196, 138, 126, 0.15); }
 
     .action-toolbar {
       margin-bottom: 20px;
@@ -235,24 +197,23 @@
       gap: 10px;
       align-items: center;
     }
-    .toolbar-spacer {
-      flex: 1;
-    }
+    .toolbar-spacer { flex: 1; }
     
-    .score-input { 
-      width: 55px; padding: 8px; 
-      border: 1px solid var(--border); 
-      border-radius: 6px; 
-      text-align: center; 
-      font-family: 'Lato', sans-serif;
-      color: var(--text-main);
-      background-color: var(--bg-main);
-      font-weight: 600;
+    .crud-form {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-left: 15px;
+      padding-left: 15px;
+      border-left: 1px solid var(--border);
     }
+
+    .score-input { width: 55px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; text-align: center; font-family: 'Lato', sans-serif; color: var(--text-main); background-color: var(--bg-main); font-weight: 600; }
     .score-input:focus { outline: none; border-color: var(--primary); background-color: var(--bg-sidebar); }
     .link-style { color: var(--primary); text-decoration: none; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
     .link-style:hover { color: var(--primary-hover); }
     .avg-display { font-weight: 800; color: var(--primary); font-size: 16px; }
+    
     .upload-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; }
     .upload-card { background: var(--bg-card); border: 1px dashed var(--border); border-radius: 12px; padding: 30px 25px; text-align: center; transition: all 0.3s ease; }
     .upload-card:hover { border-color: var(--primary); box-shadow: 0 8px 20px rgba(196, 138, 126, 0.1); transform: translateY(-2px); }
@@ -284,55 +245,75 @@
   <main class="main-content">
     
     <div id="view-students" class="view-section active">
-      <h2>學生名條</h2>
+      <div class="page-header">
+        <h2>學生名條</h2>
+        <div class="header-search">
+          <select id="search-student-type" class="round-search-select">
+            <option value="1">學號</option>
+            <option value="4">姓名</option>
+            <option value="2">班級</option>
+          </select>
+          <input type="text" id="search-student-input" class="round-search-input" placeholder="請輸入關鍵字...">
+          <button class="action-btn action-btn-solid" onclick="searchTable('students-tbody', 'search-student-type', 'search-student-input')">搜索</button>
+        </div>
+      </div>
+      
       <div class="action-toolbar">
         <button class="action-btn" id="batch-delete-btn" onclick="batchDeleteStudents()">刪除</button>
-        <div class="toolbar-spacer"></div>
-        <select id="search-student-type" class="round-search-select">
-          <option value="1">學號 ID</option>
-          <option value="4">姓名 Name</option>
-          <option value="2">班級 Class</option>
-        </select>
-        <input type="text" id="search-student-input" class="round-search-input" placeholder="請輸入關鍵字...">
-        <button class="action-btn action-btn-solid" onclick="searchTable('students-tbody', 'search-student-type', 'search-student-input')">搜索</button>
-        <button class="action-btn action-btn-solid" onclick="addStudentFrontend()">新增資料</button>
         
+        <div class="crud-form">
+          <input type="text" id="stu-id" class="round-search-input" style="width:80px;" placeholder="學號">
+          <input type="text" id="stu-class" class="round-search-input" style="width:100px;" placeholder="班級">
+          <input type="text" id="stu-seat" class="round-search-input" style="width:60px;" placeholder="座號">
+          <input type="text" id="stu-name" class="round-search-input" style="width:90px;" placeholder="姓名">
+          <button class="action-btn action-btn-solid" onclick="saveStudentFrontend()">儲存</button>
+          <button class="action-btn" onclick="clearStudentForm()">清空</button>
+        </div>
+
+        <div class="toolbar-spacer"></div>
         <button class="action-btn" onclick="fetchStudentsFromAPI()">↻</button>
       </div>
       <table>
         <thead>
           <tr>
             <th class="checkbox-cell"><input type="checkbox" id="selectAllStudents" onclick="toggleAllStudents(this)"></th>
-            <th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th>
+            <th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th><th>操作 Action</th>
           </tr>
         </thead>
-        <tbody id="students-tbody"><tr><td colspan="5" style="text-align: center; color: #a0a0a0; padding: 30px;">等待資料載入...</td></tr></tbody>
+        <tbody id="students-tbody"><tr><td colspan="6" style="text-align: center; color: #a0a0a0; padding: 30px;">等待資料載入...</td></tr></tbody>
       </table>
     </div>
 
     <div id="view-courses" class="view-section">
-      <h2>課程管理</h2>
+      <div class="page-header">
+        <h2>課程管理</h2>
+        <div class="header-search">
+          <select id="search-course-type" class="round-search-select">
+            <option value="1">代碼</option>
+            <option value="2">課程名稱</option>
+            <option value="3">學期</option>
+          </select>
+          <input type="text" id="search-course-input" class="round-search-input" placeholder="請輸入關鍵字...">
+          <button class="action-btn action-btn-solid" onclick="searchTable('courses-tbody', 'search-course-type', 'search-course-input')">搜索</button>
+        </div>
+      </div>
+      
       <div class="action-toolbar">
         <button class="action-btn" id="batch-delete-courses-btn" onclick="batchDeleteCourses()">刪除</button>
-        <div class="toolbar-spacer"></div>
-        <select id="search-course-type" class="round-search-select">
-          <option value="1">代碼 Code</option>
-          <option value="2">名稱 Course Name</option>
-          <option value="3">學期 Semester</option>
-        </select>
-        <input type="text" id="search-course-input" class="round-search-input" placeholder="請輸入關鍵字...">
-        <button class="action-btn action-btn-solid" onclick="searchTable('courses-tbody', 'search-course-type', 'search-course-input')">搜索</button>
-        <button class="action-btn action-btn-solid" onclick="addCourseFrontend()">新增資料</button>
         
+        <div class="crud-form">
+          <input type="text" id="course-id" class="round-search-input" style="width:80px;" placeholder="代碼">
+          <input type="text" id="course-name" class="round-search-input" style="width:140px;" placeholder="課程名稱">
+          <input type="text" id="course-sem" class="round-search-input" style="width:80px;" placeholder="學期">
+          <button class="action-btn action-btn-solid" onclick="saveCourseFrontend()">儲存</button>
+          <button class="action-btn" onclick="clearCourseForm()">清空</button>
+        </div>
+
+        <div class="toolbar-spacer"></div>
         <button class="action-btn" onclick="fetchCoursesFromAPI()">↻</button>
       </div>
       <table>
-        <thead>
-          <tr>
-            <th class="checkbox-cell"><input type="checkbox" id="selectAllCourses" onclick="toggleAllCourses(this)"></th>
-            <th>代碼 Code</th><th>名稱 Course Name</th><th>學期 Semester</th><th>操作 Action</th>
-          </tr>
-        </thead>
+        <thead><tr><th class="checkbox-cell"><input type="checkbox" id="selectAllCourses" onclick="toggleAllCourses(this)"></th><th>代碼 Code</th><th>名稱 Course Name</th><th>學期 Semester</th><th>操作 Action</th></tr></thead>
         <tbody id="courses-tbody"><tr><td colspan="5" style="text-align: center; color: #a0a0a0; padding: 30px;">等待資料載入...</td></tr></tbody>
       </table>
     </div>
@@ -373,8 +354,6 @@
     function switchCourseTab(tabId, btnElement) { document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active')); document.getElementById('tab-' + tabId).classList.add('active'); btnElement.classList.add('active'); }
     function enterCourse(courseId, courseName) { currentCourseId = courseId; switchMainView('course-detail'); document.getElementById('course-detail-title').innerText = `${courseName} (${courseId})`; document.querySelector('.tab-btn').click(); fetchCourseData(courseId, 'roster'); fetchCourseData(courseId, 'scores'); fetchCourseData(courseId, 'portfolios'); }
     
-    function deleteRow(btnElement) { if (confirm("確定要刪除這筆資料嗎？")) { btnElement.closest('tr').remove(); } }
-
     function searchTable(tbodyId, selectId, inputId) {
       const tbody = document.getElementById(tbodyId); const columnIndex = parseInt(document.getElementById(selectId).value, 10); const query = document.getElementById(inputId).value.trim().toLowerCase(); const rows = tbody.querySelectorAll('tr');
       rows.forEach(row => { if (row.cells.length <= 1) return; const cellText = row.cells[columnIndex] ? row.cells[columnIndex].innerText.toLowerCase() : "";
@@ -417,18 +396,14 @@
     }
     window.addEventListener('load', () => { document.querySelectorAll('.upload-card').forEach(card => { const selectBtn = card.querySelector('.file-input-wrapper > .action-btn'); const input = card.querySelector('.file-input-hidden'); if (selectBtn && input) selectBtn.addEventListener('click', (e) => { e.preventDefault(); input.click(); }); }); });
   
-   
     function toggleAllStudents(source) {
       const checkboxes = document.querySelectorAll('.student-checkbox');
       checkboxes.forEach(cb => { if (cb.closest('tr').style.display !== 'none') { cb.checked = source.checked; } });
     }
-
-
     function toggleAllCourses(source) {
       const checkboxes = document.querySelectorAll('.course-checkbox');
       checkboxes.forEach(cb => { if (cb.closest('tr').style.display !== 'none') { cb.checked = source.checked; } });
     }
-
 
     async function batchDeleteStudents() {
       const checkboxes = document.querySelectorAll('.student-checkbox:checked');
@@ -438,17 +413,13 @@
       let successCount = 0; let failCount = 0;
       for (let cb of checkboxes) {
         const stuId = cb.value;
-        try {
-          const res = await fetch(`${baseUrl}/students/${stuId}`, { method: 'DELETE' });
-          if (res.ok) successCount++; else failCount++;
-        } catch(e) { failCount++; }
+        try { const res = await fetch(`${baseUrl}/students/${stuId}`, { method: 'DELETE' }); if (res.ok) successCount++; else failCount++; } catch(e) { failCount++; }
         cb.closest('tr').remove();
       }
       btn.innerText = origText; btn.disabled = false;
-      alert(`刪除完畢！成功: ${successCount} 筆` + (failCount > 0 ? `, 失敗: ${failCount} 筆` : ''));
+      alert(`刪除完畢！成功: ${successCount} 筆` + (failCount > 0 ? `, 失敗: ${failCount} 筆 (可能為前端測試資料)` : ''));
       const selectAllCb = document.getElementById('selectAllStudents'); if(selectAllCb) selectAllCb.checked = false;
     }
-
 
     async function batchDeleteCourses() {
       const checkboxes = document.querySelectorAll('.course-checkbox:checked');
@@ -458,10 +429,7 @@
       let successCount = 0; let failCount = 0;
       for (let cb of checkboxes) {
         const courseId = cb.value;
-        try {
-          const res = await fetch(`${baseUrl}/courses/${courseId}`, { method: 'DELETE' });
-          if (res.ok) successCount++; else failCount++;
-        } catch(e) { failCount++; }
+        try { const res = await fetch(`${baseUrl}/courses/${courseId}`, { method: 'DELETE' }); if (res.ok) successCount++; else failCount++; } catch(e) { failCount++; }
         cb.closest('tr').remove();
       }
       btn.innerText = origText; btn.disabled = false;
@@ -469,22 +437,96 @@
       const selectAllCb = document.getElementById('selectAllCourses'); if(selectAllCb) selectAllCb.checked = false;
     }
 
-    function addStudentFrontend() { 
-      const input = document.getElementById('add-student-input'); const value = input.value.trim(); if (!value) { alert("請先輸入要新增的資料！"); return; }
-      let parts = value.split(/[,，\s]+/); let id = parts[0], className = parts[1] || "光子學程", seatNum = parts[2] || Math.floor(1 + Math.random() * 40), name = parts[3] || parts[0];
-      if (parts.length === 1) { id = "S" + Math.floor(15000 + Math.random() * 500); name = parts[0]; }
-      const tbody = document.getElementById('students-tbody'); if (tbody.innerHTML.includes("等待資料載入")) tbody.innerHTML = '';
-      tbody.innerHTML = `<tr><td class="checkbox-cell"><input type="checkbox" class="student-checkbox" value="${id}"></td><td style="font-weight:700;">${id}</td><td>${className}</td><td>${seatNum}</td><td style="font-weight:700;">${name}</td></tr>` + tbody.innerHTML;
-      input.value = ''; alert(`🎉 成功在前端動態掛載新學生：${name}！`);
+    function clearStudentForm() {
+      document.getElementById('stu-id').value = '';
+      document.getElementById('stu-class').value = '';
+      document.getElementById('stu-seat').value = '';
+      document.getElementById('stu-name').value = '';
     }
 
-    function addCourseFrontend() {
-      const input = document.getElementById('add-course-input'); const value = input.value.trim(); if (!value) { alert("請先輸入要新增的課程資料！"); return; }
-      let parts = value.split(/[,，\s]+/); let code = parts[0]; let name = parts[1] || parts[0]; let semester = parts[2] || "114-1"; 
-      if (parts.length === 1) { code = "C" + Math.floor(100 + Math.random() * 800); name = parts[0]; }
-      const tbody = document.getElementById('courses-tbody'); if (tbody.innerHTML.includes("等待資料載入")) tbody.innerHTML = '';
-      tbody.innerHTML = `<tr><td class="checkbox-cell"><input type="checkbox" class="course-checkbox" value="${code}"></td><td style="font-weight:700;">${code}</td><td>${name}</td><td>${semester}</td><td><button class="action-btn" onclick="enterCourse('${code}', '${name}')">Manage</button> <button class="action-btn" style="margin-left:5px;" onclick="deleteRow(this)">刪除</button></td></tr>` + tbody.innerHTML;
-      input.value = ''; alert(`🎉 成功在前端動態掛載新課程：${name}！`);
+    function editStudent(btn) {
+      const tr = btn.closest('tr');
+      document.getElementById('stu-id').value = tr.cells[1].innerText;
+      document.getElementById('stu-class').value = tr.cells[2].innerText;
+      document.getElementById('stu-seat').value = tr.cells[3].innerText;
+      document.getElementById('stu-name').value = tr.cells[4].innerText;
+    }
+
+    function saveStudentFrontend() {
+      const id = document.getElementById('stu-id').value.trim();
+      const cls = document.getElementById('stu-class').value.trim();
+      const seat = document.getElementById('stu-seat').value.trim();
+      const name = document.getElementById('stu-name').value.trim();
+      
+      if (!id || !name) { alert("「學號」與「姓名」為必填欄位！"); return; }
+
+      const tbody = document.getElementById('students-tbody');
+      if (tbody.innerHTML.includes("等待資料載入")) tbody.innerHTML = '';
+
+      let exists = false;
+      const rows = tbody.querySelectorAll('tr');
+      for(let r of rows) {
+        if(r.cells.length > 1 && r.cells[1].innerText === id) {
+          r.cells[2].innerText = cls;
+          r.cells[3].innerText = seat;
+          r.cells[4].innerText = name;
+          exists = true;
+          break;
+        }
+      }
+
+      if(!exists) {
+    
+        const newRow = `<tr><td class="checkbox-cell"><input type="checkbox" class="student-checkbox" value="${id}"></td><td style="font-weight:700;">${id}</td><td>${cls}</td><td>${seat}</td><td style="font-weight:700;">${name}</td><td><button class="action-btn" onclick="editStudent(this)">編輯</button></td></tr>`;
+        tbody.insertAdjacentHTML('afterbegin', newRow);
+      }
+
+      clearStudentForm();
+      alert(exists ? `🎉 成功在前端修改學生：${name}！(正式儲存請擴充後端 API)` : `🎉 成功在前端新增學生：${name}！(正式儲存請擴充後端 API)`);
+    }
+
+    function clearCourseForm() {
+      document.getElementById('course-id').value = '';
+      document.getElementById('course-name').value = '';
+      document.getElementById('course-sem').value = '';
+    }
+
+    function editCourse(btn) {
+      const tr = btn.closest('tr');
+      document.getElementById('course-id').value = tr.cells[1].innerText;
+      document.getElementById('course-name').value = tr.cells[2].innerText;
+      document.getElementById('course-sem').value = tr.cells[3].innerText;
+    }
+
+    function saveCourseFrontend() {
+      const code = document.getElementById('course-id').value.trim();
+      const name = document.getElementById('course-name').value.trim();
+      const sem = document.getElementById('course-sem').value.trim();
+      
+      if (!code || !name) { alert("「代碼」與「名稱」為必填欄位！"); return; }
+
+      const tbody = document.getElementById('courses-tbody');
+      if (tbody.innerHTML.includes("等待資料載入")) tbody.innerHTML = '';
+
+      let exists = false;
+      const rows = tbody.querySelectorAll('tr');
+      for(let r of rows) {
+        if(r.cells.length > 1 && r.cells[1].innerText === code) {
+          r.cells[2].innerText = name;
+          r.cells[3].innerText = sem;
+          exists = true;
+          break;
+        }
+      }
+
+      if(!exists) {
+     
+        const newRow = `<tr><td class="checkbox-cell"><input type="checkbox" class="course-checkbox" value="${code}"></td><td style="font-weight:700;">${code}</td><td>${name}</td><td>${sem}</td><td><button class="action-btn" onclick="enterCourse('${code}', '${name}')">Manage</button> <button class="action-btn" onclick="editCourse(this)">編輯</button></td></tr>`;
+        tbody.insertAdjacentHTML('afterbegin', newRow);
+      }
+
+      clearCourseForm();
+      alert(exists ? `🎉 成功在前端修改課程：${name}！(正式儲存請擴充後端 API)` : `🎉 成功在前端新增課程：${name}！(正式儲存請擴充後端 API)`);
     }
 
     async function saveScores() {
@@ -547,13 +589,13 @@
     window.onload = () => { fetch(`${baseUrl}/`).catch(err => console.log("Render server warming up...")); fetchStudentsFromAPI(); fetchCoursesFromAPI(); };
     
     function fetchStudentsFromAPI() { 
-      const tbody = document.getElementById('students-tbody'); tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>'; 
+      const tbody = document.getElementById('students-tbody'); tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>'; 
       const selectAllCb = document.getElementById('selectAllStudents'); if (selectAllCb) selectAllCb.checked = false;
       fetch(`${baseUrl}/students`).then(res => res.json()).then(data => { 
-        tbody.innerHTML = ''; data.forEach(item => { 
-          tbody.innerHTML += `<tr><td class="checkbox-cell"><input type="checkbox" class="student-checkbox" value="${item.STU_ID}"></td><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td></tr>`; 
+        
+          tbody.innerHTML += `<tr><td class="checkbox-cell"><input type="checkbox" class="student-checkbox" value="${item.STU_ID}"></td><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td><td><button class="action-btn" onclick="editStudent(this)">編輯</button></td></tr>`; 
         }); 
-      }).catch(()=> tbody.innerHTML = '<tr><td colspan="5" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>'); 
+      }).catch(()=> tbody.innerHTML = '<tr><td colspan="6" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>'); 
     }
     
     function fetchCoursesFromAPI() { 
@@ -561,7 +603,8 @@
       const selectAllCb = document.getElementById('selectAllCourses'); if (selectAllCb) selectAllCb.checked = false;
       fetch(`${baseUrl}/courses`).then(res => res.json()).then(data => { 
         tbody.innerHTML = ''; data.forEach(item => { 
-          tbody.innerHTML += `<tr><td class="checkbox-cell"><input type="checkbox" class="course-checkbox" value="${item.COURSE_ID}"></td><td style="font-weight:700;">${item.COURSE_ID}</td><td>${item.COURSE_NAME}</td><td>${item.SEMESTER}</td><td><button class="action-btn" onclick="enterCourse('${item.COURSE_ID}', '${item.COURSE_NAME}')">Manage</button> <button class="action-btn" style="margin-left:5px;" onclick="deleteRow(this)">刪除</button></td></tr>`; 
+       
+          tbody.innerHTML += `<tr><td class="checkbox-cell"><input type="checkbox" class="course-checkbox" value="${item.COURSE_ID}"></td><td style="font-weight:700;">${item.COURSE_ID}</td><td>${item.COURSE_NAME}</td><td>${item.SEMESTER}</td><td><button class="action-btn" onclick="enterCourse('${item.COURSE_ID}', '${item.COURSE_NAME}')">Manage</button> <button class="action-btn" onclick="editCourse(this)">編輯</button></td></tr>`; 
         }); 
       }).catch(()=> tbody.innerHTML = '<tr><td colspan="5" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>'); 
     }
