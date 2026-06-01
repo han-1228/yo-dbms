@@ -387,6 +387,9 @@
         const input = card.querySelector('.file-input-hidden');
         if (selectBtn && input) selectBtn.addEventListener('click', (e) => { e.preventDefault(); input.click(); });
       });
+      // 頁面載入時自動呼叫後端以暖機並取得初始資料
+      fetch(`${baseUrl}/`).catch(()=>{});
+      try { fetchStudentsFromAPI(); fetchCoursesFromAPI(); } catch(e) { console.warn('initial fetch failed', e); }
     });
   
     function addStudentFrontend() {
