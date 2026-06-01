@@ -7,6 +7,7 @@ import csv
 import time
 import random
 import io
+import re
 
 load_dotenv()
 
@@ -669,6 +670,36 @@ def save_course_scores(course_id):
             pass
         return jsonify({'error': str(e)}), 500
 
+def convert_google_link(url):
+    if not url:
+        return url
+    u = str(url).strip()
+    # 移除周圍引號
+    if (u.startswith('"') and u.endswith('"')) or (u.startswith("'") and u.endswith("'")):
+        u = u[1:-1]
+    # 先處理 drive open?id= 格式
+    m = re.search(r'[?&]id=([a-zA-Z0-9_-]+)', u)
+    if m:
+        file_id = m.group(1)
+        return f'https://drive.google.com/uc?export=download&id={file_id}'
+    # 處理 /d/<id>/ 型式
+    m2 = re.search(r'/d/([a-zA-Z0-9_-]+)', u)
+    if m2:
+        file_id = m2.group(1)
+        if 'presentation' in u or 'slides' in u:
+            return f'https://docs.google.com/presentation/d/{file_id}/preview'
+        if 'document' in u:
+            return f'https://docs.google.com/document/d/{file_id}/preview'
+        if 'spreadsheets' in u or 'sheet' in u:
+            return f'https://docs.google.com/spreadsheets/d/{file_id}/preview'
+        # generic drive file
+        return f'https://drive.google.com/uc?export=download&id={file_id}'
+    # 若包含 /edit, 替換為 /preview 並去掉 query
+    if 'docs.google.com' in u and '/edit' in u:
+        u = u.split('/edit')[0] + '/preview'
+        return u
+    return url
+
 @app.route('/api/upload', methods=['POST'])
 def api_upload():
     """接受 multipart/form-data 的 CSV 上傳，支援 header-aware parsing。
@@ -744,6 +775,9 @@ def api_upload():
                         if col == 'COURSE_ID' and not v and course_id_override:
                             v = course_id_override
                         vals.append(v)
+                    # 轉換 FILE_URL
+                    if vals and len(vals) >= 7:
+                        vals[6] = convert_google_link(vals[6])
                     records.append(tuple(vals))
                 else:
                     vals = []
@@ -769,10 +803,13 @@ def api_upload():
                     course_id = course_id_override or None
                     ast_id = processed[1]
                     title = processed[2]
-                    file_url = processed[3]
+                    file_url = convert_google_link(processed[3])
                     upload_date = processed[4]
                     records.append((portfo_id, processed[0], course_id, ast_id, title, upload_date, file_url))
                 else:
+                    # 若是完整 portfolios 7 欄，轉換最後一欄
+                    if ftype == 'portfolios' and len(processed) >= 7:
+                        processed[6] = convert_google_link(processed[6])
                     records.append(tuple(processed))
 
         if not records:
@@ -792,6 +829,4 @@ def api_upload():
         except:
             pass
         return jsonify({'error': str(e)}), 500
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+# ...existing code...
