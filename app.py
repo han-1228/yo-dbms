@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 import mysql.connector
 from dotenv import load_dotenv
@@ -200,6 +200,9 @@ def rows_to_dicts(cursor, rows):
 
 @app.route('/', methods=['GET'])
 def home():
+    index_path = os.path.join(BASE_DIR, 'index.html')
+    if os.path.exists(index_path):
+        return send_file(index_path)
     return jsonify({"message": "API 伺服器（MySQL）正常運作中！"}), 200
 
 # 新增：支援 /api 與 /api/ 的健康檢查（供前端暖機使用）
@@ -273,6 +276,15 @@ def get_course_portfolios(course_id):
         cur.execute(query, (course_id,))
         rows = cur.fetchall()
         data = rows_to_dicts(cur, rows)
+        # 新增：將 FILE_URL 與 TITLE 組成 HTML 超連結欄位 FILE_LINK
+        for item in data:
+            url = item.get('FILE_URL') or ''
+            title = item.get('TITLE') or url
+            if url:
+                # 使用雙引號並加上安全屬性，前端可直接插入為超連結
+                item['FILE_LINK'] = f"<a href=\"{url}\" target=\"_blank\" rel=\"noopener noreferrer\">{title}</a>"
+            else:
+                item['FILE_LINK'] = None
         cur.close()
         conn.close()
         return jsonify(data), 200
@@ -742,10 +754,23 @@ def api_upload():
         sql = sql_map[ftype]
 
         # 使用 generator 逐列解析 CSV，避免一次把所有資料讀入記憶體
-        def records_generator():
+        def get_clean_lines():
+            """從 stream 產生不含註解 (以 // 開頭) 與空白行的行供 csv 使用。"""
             stream.seek(0)
+            for raw in stream:
+                if raw is None:
+                    continue
+                line = raw
+                if line.strip() == '':
+                    continue
+                if line.lstrip().startswith('//'):
+                    continue
+                yield line
+
+        def records_generator():
+            # 先用 get_clean_lines() 來過濾註解/空行
             try:
-                dict_reader = csv.DictReader(stream)
+                dict_reader = csv.DictReader(get_clean_lines())
                 header = dict_reader.fieldnames
                 use_dict = bool(header and any(h and h.strip() for h in header))
             except Exception:
@@ -783,8 +808,8 @@ def api_upload():
                             vals.append(get_val(col))
                         yield tuple(vals)
             else:
-                stream.seek(0)
-                reader = csv.reader(stream)
+                reader = csv.reader(get_clean_lines())
+                # csv.reader 不需要再跳過 header，get_clean_lines 已經過濾掉註解
                 next(reader, None)
                 param_count = sql.count('%s')
                 for row in reader:
@@ -808,6 +833,21 @@ def api_upload():
         # 實際分批寫入資料庫
         conn = get_mysql_connection()
         cur = conn.cursor()
+
+        # 支援 debug/preview 模式：若傳入 debug=1，僅解析並回傳前 20 筆結果，不寫入資料庫
+        debug_flag = (request.form.get('debug') == '1') or (request.args.get('debug') == '1')
+        if debug_flag:
+            samples = []
+            gen = records_generator()
+            for i, rec in enumerate(gen):
+                if i >= 20:
+                    break
+                # 將 tuple 轉成可 JSON 化的 list
+                samples.append([None if v is None else v for v in rec])
+            cur.close()
+            conn.close()
+            return jsonify({'preview_count': len(samples), 'samples': samples}), 200
+
         inserted = executemany_in_chunks(conn, cur, sql, records_generator(), chunk_size=500)
         cur.close()
         conn.close()

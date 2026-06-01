@@ -229,6 +229,14 @@
 
     .checkbox-cell { width: 40px; text-align: center; }
     input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; accent-color: var(--primary); }
+
+    /* === 作品超連結示範 === */
+    h3 { font-size: 22px; margin-bottom: 16px; }
+    label { font-weight: 500; margin-right: 10px; }
+    #msg { margin-top: 8px; color: #666; }
+    table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+    th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+    th { background: #f4f4f4; }
   </style>
 </head>
 <body>
@@ -330,6 +338,21 @@
         <table id="pivot-scores-table"><thead id="scores-thead"></thead><tbody id="scores-tbody"><tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr></tbody></table>
       </div>
       <div id="tab-portfolios" class="tab-content"><table><thead><tr><th>學號 ID</th><th>評量ID</th><th>作品 Portfolio</th><th>連結 Link</th><th>更新時間</th></tr></thead><tbody id="portfolios-tbody"><tr><td colspan="5" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr></tbody></table></div>
+    </div>
+
+    <!-- === 作品超連結示範 === -->
+    <div class="view-section" style="display:none;">
+      <h3>作品超連結示範</h3>
+      <label>課程 ID: <input id="course" value="C001"></label>
+      <button id="load">載入作品</button>
+      <div id="msg" style="margin-top:8px;color:#666"></div>
+
+      <table id="tbl">
+        <thead>
+          <tr><th>學號</th><th>姓名</th><th>標題</th><th>連結</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </div>
   </main>
 
@@ -530,6 +553,62 @@
         }); 
       }).catch(()=> tbody.innerHTML = '<tr><td colspan="4" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>'); 
     }
+
+    /* === 作品超連結示範 === */
+    function escapeHtml(s){
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    async function loadPortfolios(){
+      const course = document.getElementById('course').value.trim();
+      const msg = document.getElementById('msg');
+      msg.textContent = '載入中...';
+      try{
+        const res = await fetch(`/api/course/${encodeURIComponent(course)}/portfolios`);
+        if(!res.ok) throw new Error('fetch failed');
+        const data = await res.json();
+        const tbody = document.querySelector('#tbl tbody');
+        tbody.innerHTML = '';
+        if(!Array.isArray(data) || data.length === 0){
+          msg.textContent = '沒有作品資料。';
+          return;
+        }
+        data.forEach(item => {
+          const tr = document.createElement('tr');
+          const tdId = document.createElement('td'); tdId.textContent = item.STU_ID || '';
+          const tdName = document.createElement('td'); tdName.textContent = item.STU_NAME || '';
+          const tdTitle = document.createElement('td'); tdTitle.textContent = item.TITLE || '';
+          const tdLink = document.createElement('td');
+          // FILE_LINK 由後端產生 HTML，若有就直接插入（前端可改為自行建立 <a> 以加強安全性）
+          if(item.FILE_LINK){
+            tdLink.innerHTML = item.FILE_LINK;
+          } else if(item.FILE_URL){
+            const a = document.createElement('a');
+            a.href = item.FILE_URL; a.target = '_blank'; a.rel = 'noopener noreferrer';
+            a.textContent = item.TITLE || item.FILE_URL;
+            tdLink.appendChild(a);
+          }
+          tr.appendChild(tdId);
+          tr.appendChild(tdName);
+          tr.appendChild(tdTitle);
+          tr.appendChild(tdLink);
+          tbody.appendChild(tr);
+        });
+        msg.textContent = `載入 ${data.length} 筆作品。`;
+      }catch(err){
+        msg.textContent = '載入失敗，請檢查後端或網路。';
+        console.error(err);
+      }
+    }
+
+    document.getElementById('load').addEventListener('click', loadPortfolios);
+    // 頁面載入自動載入一次
+    window.addEventListener('load', () => { setTimeout(loadPortfolios, 200); });
   </script>
 </body>
 </html>
