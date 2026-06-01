@@ -254,19 +254,20 @@ def get_course_roster(course_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/course/<course_id>/scores', methods=['GET'])
-def get_course_scores(course_id):
+@app.route('/api/course/<course_id>/portfolios', methods=['GET'])
+def get_course_portfolios(course_id):
     try:
         conn = get_mysql_connection()
         cur = conn.cursor()
-        cur.execute(
-            "SELECT sc.SCORE_ID, sc.STU_ID, st.STU_NAME, st.CLASS_NAME, st.SEAT_NUM, sc.AST_ID, a.AST_NAME, sc.SCORE "
-            "FROM Scores sc "
-            "JOIN Students st ON sc.STU_ID = st.STU_ID "
-            "JOIN Assessments a ON sc.AST_ID = a.AST_ID "
-            "WHERE a.COURSE_ID = %s",
-            (course_id,)
-        )
+        query = """
+            SELECT s.CLASS_NAME, s.SEAT_NUM, s.STU_NAME, 
+                   p.TITLE AS PORT_NAME, p.FILE_URL AS PORT_LINK, p.UPLOAD_DATE 
+            FROM Portfolios p 
+            JOIN Students s ON p.STU_ID = s.STU_ID 
+            WHERE p.COURSE_ID = %s
+        """
+        
+        cur.execute(query, (course_id,))
         rows = cur.fetchall()
         data = rows_to_dicts(cur, rows)
         cur.close()
