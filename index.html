@@ -645,17 +645,29 @@
         const ast = list.find(a => a.AST_ID === astId);
         if(!ast){ alert('找不到評量資料'); return; }
         const current = parseFloat(ast.WEIGHT) || 0;
-        let input = prompt(`請輸入 ${ast.AST_NAME} 的權重（0~100 為百分比，或 0~1 的小數）：`, (current*100).toFixed(0));
+        // 預設顯示小數 (0~1)
+        let input = prompt(`請輸入 ${ast.AST_NAME} 的權重（請輸入小數，例如 0.3 表示 30%）：`, (current).toFixed(2));
         if(input === null) return; input = input.toString().trim(); if(input === '') return;
         let val = parseFloat(input);
         if(isNaN(val)){ alert('輸入不是數字'); return; }
-        if(val > 1){ val = val / 100; }
-        if(val < 0 || val > 1){ alert('權重必須介於 0 與 1 之間'); return; }
+        // 強制只接受 0~1 的小數，拒絕百分比形式
+        if(val < 0 || val > 1){ alert('權重必須為介於 0 與 1 的小數（例如 0.25）'); return; }
         // 呼叫後端更新
         fetch(`${baseUrl}/course/${courseId}/assessments/${astId}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ weight: val }) }).then(res => res.json()).then(js => {
           if(js.error){ alert('更新失敗：' + js.error); return; }
+          // 更新本地快取，避免使用舊資料
+          if(js.assessments && Array.isArray(js.assessments)){
+            assessmentCache[courseId] = js.assessments;
+            const map = {};
+            js.assessments.forEach(a => { map[a.AST_NAME] = parseFloat(a.WEIGHT) || 0; });
+            assessmentWeightMap[courseId] = map;
+          } else {
+            // 若後端沒有回傳 assessments，清掉快取以便重新抓取
+            delete assessmentCache[courseId];
+            delete assessmentWeightMap[courseId];
+          }
           alert(`更新完成，課程總權重：${(js.total_weight*100).toFixed(1)}%`);
-          // 重新載入評量與成績
+          // 重新載入評量與成績（使用已更新過的快取）
           fetchCourseData(courseId, 'scores');
         }).catch(err => alert('更新失敗'));
       }).catch(() => alert('無法取得評量資料'));

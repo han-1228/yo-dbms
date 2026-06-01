@@ -31,7 +31,7 @@ CREATE TABLE Assessments (
     COURSE_ID VARCHAR(10),
     AST_NAME VARCHAR(100) NOT NULL,
     CATEGORY VARCHAR(50),
-    WEIGHT INT,
+    WEIGHT FLOAT,
     FOREIGN KEY (COURSE_ID) REFERENCES Courses(COURSE_ID)
 );
 
@@ -58,3 +58,51 @@ CREATE TABLE Portfolios (
     FOREIGN KEY (COURSE_ID) REFERENCES Courses(COURSE_ID),
     FOREIGN KEY (AST_ID) REFERENCES Assessments(AST_ID)
 );
+
+-- Trigger: after insert/update normalize weights per course
+DELIMITER $$
+DROP TRIGGER IF EXISTS tr_assess_norm_after_insert $$
+CREATE TRIGGER tr_assess_norm_after_insert
+AFTER INSERT ON Assessments
+FOR EACH ROW
+BEGIN
+  -- 避免觸發器內部再次觸發無窮迴圈，使用 session 變數作為鎖
+  IF @__assess_norm_lock IS NULL OR @__assess_norm_lock = 0 THEN
+    SET @__assess_norm_lock = 1;
+    DECLARE _sum DOUBLE DEFAULT 0;
+    DECLARE _cnt INT DEFAULT 0;
+    SELECT SUM(WEIGHT) INTO _sum FROM Assessments WHERE COURSE_ID = NEW.COURSE_ID;
+    IF _sum IS NULL OR _sum = 0 THEN
+      SELECT COUNT(*) INTO _cnt FROM Assessments WHERE COURSE_ID = NEW.COURSE_ID;
+      IF _cnt > 0 THEN
+        UPDATE Assessments SET WEIGHT = 1.0 / _cnt WHERE COURSE_ID = NEW.COURSE_ID;
+      END IF;
+    ELSE
+      UPDATE Assessments SET WEIGHT = WEIGHT / _sum WHERE COURSE_ID = NEW.COURSE_ID;
+    END IF;
+    SET @__assess_norm_lock = 0;
+  END IF;
+END $$
+
+DROP TRIGGER IF EXISTS tr_assess_norm_after_update $$
+CREATE TRIGGER tr_assess_norm_after_update
+AFTER UPDATE ON Assessments
+FOR EACH ROW
+BEGIN
+  IF @__assess_norm_lock IS NULL OR @__assess_norm_lock = 0 THEN
+    SET @__assess_norm_lock = 1;
+    DECLARE _sum2 DOUBLE DEFAULT 0;
+    DECLARE _cnt2 INT DEFAULT 0;
+    SELECT SUM(WEIGHT) INTO _sum2 FROM Assessments WHERE COURSE_ID = NEW.COURSE_ID;
+    IF _sum2 IS NULL OR _sum2 = 0 THEN
+      SELECT COUNT(*) INTO _cnt2 FROM Assessments WHERE COURSE_ID = NEW.COURSE_ID;
+      IF _cnt2 > 0 THEN
+        UPDATE Assessments SET WEIGHT = 1.0 / _cnt2 WHERE COURSE_ID = NEW.COURSE_ID;
+      END IF;
+    ELSE
+      UPDATE Assessments SET WEIGHT = WEIGHT / _sum2 WHERE COURSE_ID = NEW.COURSE_ID;
+    END IF;
+    SET @__assess_norm_lock = 0;
+  END IF;
+END $$
+DELIMITER ;
