@@ -115,27 +115,6 @@
     }
     tbody tr:nth-child(even) { background-color: var(--bg-card); }
     tbody tr:hover { background-color: #f2e9e7; }
-
-    /* 💡 動態權重標頭專屬樣式 */
-    .clickable-th {
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .clickable-th:hover {
-      background-color: #fcece9;
-      color: var(--primary);
-    }
-    .weight-badge {
-      display: inline-block;
-      background: var(--bg-main);
-      color: var(--primary);
-      padding: 2px 6px;
-      border-radius: 10px;
-      font-size: 10px;
-      margin-top: 4px;
-      border: 1px solid var(--primary);
-      letter-spacing: 0;
-    }
     
     .course-tabs { 
       display: flex; gap: 20px; 
@@ -233,6 +212,7 @@
       box-shadow: 0 0 10px rgba(196, 138, 126, 0.15);
     }
 
+    /* 工具列控制項排版 */
     .action-toolbar {
       margin-bottom: 20px;
       display: flex;
@@ -263,6 +243,27 @@
     .upload-card h3 { font-family: 'Playfair Display', serif; margin-top: 0; margin-bottom: 25px; font-size: 18px; color: #000000; }
     .file-input-wrapper { position: relative; margin-bottom: 15px; display: inline-block; }
     .file-input-hidden { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+
+    /* 💡 新增：動態權重可點擊標頭與徽章樣式 */
+    .clickable-th {
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .clickable-th:hover {
+      background-color: #fcece9;
+      color: var(--primary);
+    }
+    .weight-badge {
+      display: inline-block;
+      background: var(--bg-main);
+      color: var(--primary);
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 10px;
+      margin-top: 4px;
+      border: 1px solid var(--primary);
+      letter-spacing: 0;
+    }
   </style>
 </head>
 <body>
@@ -285,8 +286,8 @@
         <button class="action-btn action-btn-solid" onclick="addStudentFrontend()">新增資料</button>
       </div>
       <table>
-        <thead><tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th></tr></thead>
-        <tbody id="students-tbody"><tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">等待資料載入...</td></tr></tbody>
+        <thead><tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th><th>操作 Action</th></tr></thead>
+        <tbody id="students-tbody"><tr><td colspan="5" style="text-align: center; color: #a0a0a0; padding: 30px;">等待資料載入...</td></tr></tbody>
       </table>
     </div>
 
@@ -321,17 +322,7 @@
       <h2 id="course-detail-title">Course Name</h2>
       <div class="course-tabs"><button class="tab-btn active" onclick="switchCourseTab('roster', this)">Roster 名單</button><button class="tab-btn" onclick="switchCourseTab('scores', this)">Scores 成績</button><button class="tab-btn" onclick="switchCourseTab('portfolios', this)">Portfolios 作品</button></div>
       <div id="tab-roster" class="tab-content active"><table><thead><tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th></tr></thead><tbody id="roster-tbody"><tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr></tbody></table></div>
-      
-      <div id="tab-scores" class="tab-content">
-        <div style="text-align: right; margin-bottom: 15px;">
-          <button class="action-btn action-btn-solid" onclick="alert('成績儲存功能尚未完成後端 API 串接。')">Save Scores</button>
-        </div>
-        <table id="pivot-scores-table">
-          <thead id="scores-thead"></thead>
-          <tbody id="scores-tbody"><tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr></tbody>
-        </table>
-      </div>
-
+      <div id="tab-scores" class="tab-content"><div style="text-align: right; margin-bottom: 15px;"><button class="action-btn action-btn-solid" onclick="alert('成績儲存功能尚未完成後端 API 串接。')">Save Scores</button></div><table id="pivot-scores-table"><thead id="scores-thead"></thead><tbody id="scores-tbody"><tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr></tbody></table></div>
       <div id="tab-portfolios" class="tab-content"><table><thead><tr><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th><th>作品 Portfolio</th><th>連結 Link</th><th>日期 Date</th></tr></thead><tbody id="portfolios-tbody"><tr><td colspan="6" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr></tbody></table></div>
     </div>
   </main>
@@ -347,12 +338,63 @@
     function switchCourseTab(tabId, btnElement) { document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active')); document.getElementById('tab-' + tabId).classList.add('active'); btnElement.classList.add('active'); }
     function enterCourse(courseId, courseName) { currentCourseId = courseId; switchMainView('course-detail'); document.getElementById('course-detail-title').innerText = `${courseName} (${courseId})`; document.querySelector('.tab-btn').click(); fetchCourseData(courseId, 'roster'); fetchCourseData(courseId, 'scores'); fetchCourseData(courseId, 'portfolios'); }
     
+
+    function deleteRow(btnElement) {
+      if (confirm("確定要刪除這筆資料嗎？")) {
+        btnElement.closest('tr').remove();
+      }
+    }
+
+
+    function calculateRowAverage(inputElem) { 
+      const tr = inputElem.closest('tr'); 
+      const inputs = tr.querySelectorAll('.score-input'); 
+      const avgCell = tr.querySelector('.avg-display'); 
+      let weightedSum = 0; 
+      inputs.forEach(inp => { 
+        let val = parseFloat(inp.value); 
+        let itemName = inp.getAttribute('data-item'); 
+        let weight = currentCourseWeights[itemName] || 0; 
+        if (!isNaN(val)) { weightedSum += val * weight; } 
+      }); 
+      avgCell.innerText = weightedSum.toFixed(1); 
+    }
+
+
+    function recalculateAllAverages() { 
+      const inputs = document.querySelectorAll('#scores-tbody tr .score-input:first-of-type'); 
+      inputs.forEach(inp => calculateRowAverage(inp)); 
+    }
+    
+
+    function changeWeight(itemName) {
+      let currentW = Math.round((currentCourseWeights[itemName] || 0) * 100);
+      let input = prompt(`請設定【${itemName}】的權重比例 (%)\n例如：輸入 30 代表 30%`, currentW);
+      if (input !== null && input.trim() !== '') {
+          let w = parseFloat(input);
+          if (!isNaN(w) && w >= 0) {
+              currentCourseWeights[itemName] = w / 100;
+              let th = document.getElementById(`th-weight-${itemName}`);
+              if (th) th.innerHTML = `${itemName} <br><span class="weight-badge">${w}%</span>`;
+              let totalW = 0; Object.values(currentCourseWeights).forEach(val => totalW += val);
+              if (Math.abs(totalW - 1.0) > 0.01) alert(`⚠️ 提醒：目前各項權重總和為 ${Math.round(totalW * 100)}%\n建議調整至 100% 確保總成績準確。`);
+              recalculateAllAverages();
+          } else { alert("請輸入有效的數字！"); }
+      }
+    }
+
     function updateFileNameDisplay(inputElem) { const card = inputElem.closest('.upload-card'); const nameText = card.querySelector('.file-name-text'); if(inputElem.files.length > 0) { nameText.innerText = `📄 ${inputElem.files[0].name}`; nameText.style.color = "#166534"; } else { nameText.innerText = "尚未選取檔案"; nameText.style.color = "var(--primary)"; } }
+    
+
     async function simulateUpload(btnElem) {
       const card = btnElem.closest('.upload-card');
       const fileInput = card.querySelector('.file-input-hidden');
-      if (!fileInput || fileInput.files.length === 0) { alert("請先選擇要上傳的 CSV 檔案！"); return; }
+      if (!fileInput || fileInput.files.length === 0) {
+        alert("請先選擇要上傳的 CSV 檔案！");
+        return;
+      }
       const file = fileInput.files[0];
+
       const title = (card.querySelector('h3')?.innerText || '').toLowerCase();
       let type = 'unknown';
       if (/students|名單/.test(title)) type = 'students';
@@ -361,102 +403,80 @@
       else if (/assess|評量/.test(title)) type = 'assessments';
       else if (/score|成績/.test(title)) type = 'scores';
       else if (/portfolio|作品/.test(title)) type = 'portfolios';
-      const form = new FormData(); form.append('file', file); form.append('type', type);
-      const originalText = btnElem.innerText; btnElem.disabled = true; btnElem.innerText = "上傳中... ⏳";
+
+      const form = new FormData();
+      form.append('file', file);
+      form.append('type', type);
+
+      const originalText = btnElem.innerText;
+      btnElem.disabled = true;
+      btnElem.innerText = "上傳中... ⏳";
+
       try {
         const res = await fetch(`${baseUrl}/upload`, { method: 'POST', body: form });
-        btnElem.disabled = false; btnElem.innerText = originalText;
-        if (!res.ok) { const txt = await res.text().catch(()=>null); throw new Error(txt || `伺服器回應 ${res.status}`); }
+        btnElem.disabled = false;
+        btnElem.innerText = originalText;
+        if (!res.ok) {
+          const txt = await res.text().catch(()=>null);
+          throw new Error(txt || `伺服器回應 ${res.status}`);
+        }
         const json = await res.json().catch(()=>({ message: '上傳完成' }));
         alert(`🎉 檔案 ${file.name} 上傳成功：${json.message || ''}`);
+
+      
         if (type === 'students') fetchStudentsFromAPI();
         if (type === 'courses') fetchCoursesFromAPI();
         if (['enrollments','assessments','scores','portfolios'].includes(type) && currentCourseId) {
-          fetchCourseData(currentCourseId, 'roster'); fetchCourseData(currentCourseId, 'scores'); fetchCourseData(currentCourseId, 'portfolios');
+          fetchCourseData(currentCourseId, 'roster');
+          fetchCourseData(currentCourseId, 'scores');
+          fetchCourseData(currentCourseId, 'portfolios');
         }
-      } catch (err) { btnElem.disabled = false; btnElem.innerText = originalText; alert(`上傳失敗：${err.message || err}`); }
+      } catch (err) {
+        btnElem.disabled = false;
+        btnElem.innerText = originalText;
+        alert(`上傳失敗：${err.message || err}`);
+      }
     }
-    window.addEventListener('load', () => { document.querySelectorAll('.upload-card').forEach(card => { const selectBtn = card.querySelector('.file-input-wrapper > .action-btn'); const input = card.querySelector('.file-input-hidden'); if (selectBtn && input) selectBtn.addEventListener('click', (e) => { e.preventDefault(); input.click(); }); }); });
+
+    window.addEventListener('load', () => {
+      document.querySelectorAll('.upload-card').forEach(card => {
+        const selectBtn = card.querySelector('.file-input-wrapper > .action-btn');
+        const input = card.querySelector('.file-input-hidden');
+        if (selectBtn && input) selectBtn.addEventListener('click', (e) => { e.preventDefault(); input.click(); });
+      });
+    });
   
+
     function addStudentFrontend() {
-      const input = document.getElementById('add-student-input'); const value = input.value.trim(); if (!value) { alert("請先輸入要新增的資料！"); return; }
-      let parts = value.split(/[,，\s]+/); let id = parts[0], className = parts[1] || "光子學程", seatNum = parts[2] || Math.floor(1 + Math.random() * 40), name = parts[3] || parts[0];
+      const input = document.getElementById('add-student-input');
+      const value = input.value.trim();
+      if (!value) { alert("請先輸入要新增的資料！"); return; }
+      let parts = value.split(/[,，\s]+/);
+      let id = parts[0], className = parts[1] || "光子學程", seatNum = parts[2] || Math.floor(1 + Math.random() * 40), name = parts[3] || parts[0];
       if (parts.length === 1) { id = "S" + Math.floor(15000 + Math.random() * 500); name = parts[0]; }
-      const tbody = document.getElementById('students-tbody'); if (tbody.innerHTML.includes("等待資料載入")) tbody.innerHTML = '';
-      tbody.innerHTML = `<tr><td style="font-weight:700;">${id}</td><td>${className}</td><td>${seatNum}</td><td style="font-weight:700;">${name}</td></tr>` + tbody.innerHTML;
+      const tbody = document.getElementById('students-tbody');
+      if (tbody.innerHTML.includes("等待資料載入")) tbody.innerHTML = '';
+      tbody.innerHTML = `<tr><td style="font-weight:700;">${id}</td><td>${className}</td><td>${seatNum}</td><td style="font-weight:700;">${name}</td><td><button class="action-btn" onclick="deleteRow(this)">刪除</button></td></tr>` + tbody.innerHTML;
       input.value = ''; alert(`🎉 成功在前端動態掛載新學生：${name}！`);
     }
 
+   
     function addCourseFrontend() {
-      const input = document.getElementById('add-course-input'); const value = input.value.trim(); if (!value) { alert("請先輸入要新增的課程資料！"); return; }
-      let parts = value.split(/[,，\s]+/); let code = parts[0]; let name = parts[1] || parts[0]; let semester = parts[2] || "114-1"; 
+      const input = document.getElementById('add-course-input');
+      const value = input.value.trim();
+      if (!value) { alert("請先輸入要新增的課程資料！"); return; }
+      let parts = value.split(/[,，\s]+/);
+      let code = parts[0];
+      let name = parts[1] || parts[0]; 
+      let semester = parts[2] || "114-1"; 
       if (parts.length === 1) { code = "C" + Math.floor(100 + Math.random() * 800); name = parts[0]; }
-      const tbody = document.getElementById('courses-tbody'); if (tbody.innerHTML.includes("等待資料載入")) tbody.innerHTML = '';
-      tbody.innerHTML = `<tr><td style="font-weight:700;">${code}</td><td>${name}</td><td>${semester}</td><td><button class="action-btn" onclick="enterCourse('${code}', '${name}')">Manage</button></td></tr>` + tbody.innerHTML;
+      const tbody = document.getElementById('courses-tbody');
+      if (tbody.innerHTML.includes("等待資料載入")) tbody.innerHTML = '';
+      tbody.innerHTML = `<tr><td style="font-weight:700;">${code}</td><td>${name}</td><td>${semester}</td><td><button class="action-btn" onclick="enterCourse('${code}', '${name}')">Manage</button> <button class="action-btn" style="margin-left:5px;" onclick="deleteRow(this)">刪除</button></td></tr>` + tbody.innerHTML;
       input.value = ''; alert(`🎉 成功在前端動態掛載新課程：${name}！`);
     }
 
    
-    function calculateRowAverage(inputElem) { 
-      const tr = inputElem.closest('tr'); 
-      const inputs = tr.querySelectorAll('.score-input'); 
-      const avgCell = tr.querySelector('.avg-display'); 
-      
-      let weightedSum = 0; 
-      
-      inputs.forEach(inp => { 
-        let val = parseFloat(inp.value); 
-        let itemName = inp.getAttribute('data-item');
-        let weight = currentCourseWeights[itemName] || 0; 
-        
-        if (!isNaN(val)) { 
-          weightedSum += val * weight; 
-        } 
-      }); 
-      
- 
-      avgCell.innerText = weightedSum.toFixed(1); 
-    }
-
-    function recalculateAllAverages() {
-   
-      const inputs = document.querySelectorAll('#scores-tbody tr .score-input:first-of-type');
-      inputs.forEach(inp => calculateRowAverage(inp));
-    }
-
-
-    function changeWeight(itemName) {
-      let currentW = Math.round((currentCourseWeights[itemName] || 0) * 100);
-      let input = prompt(`請設定【${itemName}】的權重比例 (%)\n例如：輸入 30 代表 30%`, currentW);
-      
-      if (input !== null && input.trim() !== '') {
-          let w = parseFloat(input);
-          if (!isNaN(w) && w >= 0) {
-    
-              currentCourseWeights[itemName] = w / 100;
-              
-     
-              let th = document.getElementById(`th-weight-${itemName}`);
-              if (th) {
-                  th.innerHTML = `${itemName} <br><span class="weight-badge">${w}%</span>`;
-              }
-              
-           
-              let totalW = 0;
-              Object.values(currentCourseWeights).forEach(val => totalW += val);
-              if (Math.abs(totalW - 1.0) > 0.01) {
-                  alert(`⚠️ 提醒：目前各項權重總和為 ${Math.round(totalW * 100)}%\n建議調整至 100% 確保總成績準確。`);
-              }
-
-      
-              recalculateAllAverages();
-          } else {
-              alert("請輸入有效的數字！");
-          }
-      }
-    }
-
-
     function fetchCourseData(courseId, type) { 
       const tbody = document.getElementById(`${type}-tbody`); 
       tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">資料載入中...</td></tr>`; 
@@ -481,20 +501,18 @@
               } 
             }); 
 
-           
+     
             currentCourseWeights = {};
             let assessCount = assessmentItems.length;
             assessmentItems.forEach(item => {
                 currentCourseWeights[item] = assessCount > 0 ? (1 / assessCount) : 0;
             });
 
-        
+  
             let headerHtml = `<tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th>`; 
             assessmentItems.forEach(item => { 
               let wPct = Math.round(currentCourseWeights[item] * 100);
-              headerHtml += `<th class="clickable-th" onclick="changeWeight('${item}')" id="th-weight-${item}" title="點擊修改權重">
-                ${item} <br><span class="weight-badge">${wPct}%</span>
-              </th>`; 
+              headerHtml += `<th class="clickable-th" onclick="changeWeight('${item}')" id="th-weight-${item}" title="點擊修改權重">${item} <br><span class="weight-badge">${wPct}%</span></th>`; 
             }); 
             headerHtml += `<th style="color: var(--primary);">加權平均 AVG</th></tr>`; 
             thead.innerHTML = headerHtml; 
@@ -512,7 +530,7 @@
               
               assessmentItems.forEach(item => { 
                 let scoreValue = student.grades[item] !== undefined ? student.grades[item] : ''; 
-              
+           
                 rowHtml += `<td><input type="number" class="score-input" data-item="${item}" value="${scoreValue}" oninput="calculateRowAverage(this)"></td>`; 
               }); 
               
@@ -521,7 +539,7 @@
               tbody.innerHTML += rowHtml; 
             }); 
 
-          
+            
             recalculateAllAverages();
 
           } else { 
@@ -533,12 +551,41 @@
               } 
             }); 
           } 
-        }).catch(() => tbody.innerHTML = '<tr><td style="color:#c48a7e; text-align: center; padding: 20px;">資料讀取失敗，請確認後端已更新</td></tr>'); 
+        })
+        .catch(() => tbody.innerHTML = '<tr><td style="color:#c48a7e; text-align: center; padding: 20px;">資料讀取失敗，請確認後端已更新</td></tr>'); 
     }
     
     window.onload = () => { fetch(`${baseUrl}/`).catch(err => console.log("Render server warming up...")); fetchStudentsFromAPI(); fetchCoursesFromAPI(); };
-    function fetchStudentsFromAPI() { const tbody = document.getElementById('students-tbody'); tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>'; fetch(`${baseUrl}/students`).then(res => res.json()).then(data => { tbody.innerHTML = ''; data.forEach(item => { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td></tr>`; }); }).catch(()=> tbody.innerHTML = '<tr><td colspan="4" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>'); }
-    function fetchCoursesFromAPI() { const tbody = document.getElementById('courses-tbody'); tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>'; fetch(`${baseUrl}/courses`).then(res => res.json()).then(data => { tbody.innerHTML = ''; data.forEach(item => { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.COURSE_ID}</td><td>${item.COURSE_NAME}</td><td>${item.SEMESTER}</td><td><button class="action-btn" onclick="enterCourse('${item.COURSE_ID}', '${item.COURSE_NAME}')">Manage</button></td></tr>`; }); }).catch(()=> tbody.innerHTML = '<tr><td colspan="4" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>'); }
+    
+   
+    function fetchStudentsFromAPI() { 
+      const tbody = document.getElementById('students-tbody'); 
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>'; 
+      fetch(`${baseUrl}/students`)
+        .then(res => res.json())
+        .then(data => { 
+          tbody.innerHTML = ''; 
+          data.forEach(item => { 
+            tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td><td><button class="action-btn" onclick="deleteRow(this)">刪除</button></td></tr>`; 
+          }); 
+        })
+        .catch(()=> tbody.innerHTML = '<tr><td colspan="5" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>'); 
+    }
+    
+
+    function fetchCoursesFromAPI() { 
+      const tbody = document.getElementById('courses-tbody'); 
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>'; 
+      fetch(`${baseUrl}/courses`)
+        .then(res => res.json())
+        .then(data => { 
+          tbody.innerHTML = ''; 
+          data.forEach(item => { 
+            tbody.innerHTML += `<tr><td style="font-weight:700;">${item.COURSE_ID}</td><td>${item.COURSE_NAME}</td><td>${item.SEMESTER}</td><td><button class="action-btn" onclick="enterCourse('${item.COURSE_ID}', '${item.COURSE_NAME}')">Manage</button> <button class="action-btn" style="margin-left:5px;" onclick="deleteRow(this)">刪除</button></td></tr>`; 
+          }); 
+        })
+        .catch(()=> tbody.innerHTML = '<tr><td colspan="4" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>'); 
+    }
   </script>
 </body>
 </html>
