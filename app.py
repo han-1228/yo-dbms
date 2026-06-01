@@ -533,31 +533,41 @@ def update_assessment_weight(course_id, ast_id):
             conn.close()
             return jsonify({'error': 'assessment not found for this course'}), 404
 
-        # 更新指定評量
-        cur.execute("UPDATE Assessments SET WEIGHT = %s WHERE AST_ID = %s AND COURSE_ID = %s", (weight, ast_id, course_id))
-
-        # 抓取此課程所有評量權重，並做正規化使總和為 1
+        # 先取得所有評量的當前權重
         cur.execute("SELECT AST_ID, WEIGHT FROM Assessments WHERE COURSE_ID = %s", (course_id,))
         rows = cur.fetchall()
-        weights = [(r[0], float(r[1]) if r[1] is not None else 0.0) for r in rows]
-        total = sum(w for _, w in weights)
+        items = [(r[0], float(r[1]) if r[1] is not None else 0.0) for r in rows]
+        ast_ids = [it[0] for it in items]
 
-        if len(weights) == 0:
-            conn.commit()
+        if ast_id not in ast_ids:
             cur.close()
             conn.close()
-            return jsonify({'ok': True, 'updated': 0, 'total_weight': 0.0}), 200
+            return jsonify({'error': 'assessment not found for this course'}), 404
 
-        if total == 0:
-            # 若全部為 0，平均分配
-            n = len(weights)
-            for ast, _ in weights:
-                cur.execute("UPDATE Assessments SET WEIGHT = %s WHERE AST_ID = %s AND COURSE_ID = %s", (1.0 / n, ast, course_id))
+        # 設定目標評量為使用者輸入的權重（暫存）
+        # 其餘評量按比例縮放，使總和為 1 且保留使用者指定評量的絕對值
+        remaining = 1.0 - weight
+        # 計算其他評量目前總和（排除目標）
+        other_sum = sum(w for aid, w in items if aid != ast_id)
+
+        if other_sum <= 0:
+            # 如果其他評量目前為 0（或不存在），把剩餘權重平均分配給其他項目
+            other_ids = [aid for aid, _ in items if aid != ast_id]
+            n = len(other_ids)
+            for aid in other_ids:
+                new_w = (remaining / n) if n > 0 else 0.0
+                cur.execute("UPDATE Assessments SET WEIGHT = %s WHERE AST_ID = %s AND COURSE_ID = %s", (new_w, aid, course_id))
+            # 把目標評量直接設為 weight
+            cur.execute("UPDATE Assessments SET WEIGHT = %s WHERE AST_ID = %s AND COURSE_ID = %s", (weight, ast_id, course_id))
         else:
-            factor = 1.0 / total
-            for ast, w in weights:
-                new_w = w * factor
-                cur.execute("UPDATE Assessments SET WEIGHT = %s WHERE AST_ID = %s AND COURSE_ID = %s", (new_w, ast, course_id))
+            # 按比例縮放其他評量
+            for aid, w in items:
+                if aid == ast_id:
+                    # 目標評量設為使用者輸入
+                    cur.execute("UPDATE Assessments SET WEIGHT = %s WHERE AST_ID = %s AND COURSE_ID = %s", (weight, aid, course_id))
+                else:
+                    new_w = (w / other_sum) * remaining
+                    cur.execute("UPDATE Assessments SET WEIGHT = %s WHERE AST_ID = %s AND COURSE_ID = %s", (new_w, aid, course_id))
 
         # 取得更新後的清單並回傳
         cur.execute("SELECT AST_ID, AST_NAME, WEIGHT FROM Assessments WHERE COURSE_ID = %s", (course_id,))
