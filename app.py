@@ -175,6 +175,15 @@ def rows_to_dicts(cursor, rows):
 def home():
     return jsonify({"message": "API 伺服器（MySQL）正常運作中！"}), 200
 
+# 新增：支援 /api 與 /api/ 的健康檢查（供前端暖機使用）
+@app.route('/api', methods=['GET'])
+@app.route('/api/', methods=['GET'])
+def api_root():
+    try:
+        return jsonify({"message": "API (MySQL) 正常運作中！", "ok": True}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/students', methods=['GET'])
 def get_students():
     try:
