@@ -515,15 +515,51 @@ def update_assessment_weight(course_id, ast_id):
 
         conn = get_mysql_connection()
         cur = conn.cursor()
+        conn.start_transaction()
+
+        # 確認該評量存在於此課程
+        cur.execute("SELECT AST_ID FROM Assessments WHERE AST_ID = %s AND COURSE_ID = %s", (ast_id, course_id))
+        if cur.fetchone() is None:
+            cur.close()
+            conn.close()
+            return jsonify({'error': 'assessment not found for this course'}), 404
+
+        # 更新指定評量
         cur.execute("UPDATE Assessments SET WEIGHT = %s WHERE AST_ID = %s AND COURSE_ID = %s", (weight, ast_id, course_id))
-        updated = cur.rowcount
-        # 計算此課程目前總權重
-        cur.execute("SELECT IFNULL(SUM(WEIGHT),0) FROM Assessments WHERE COURSE_ID = %s", (course_id,))
-        total = cur.fetchone()[0]
+
+        # 抓取此課程所有評量權重，並做正規化使總和為 1
+        cur.execute("SELECT AST_ID, WEIGHT FROM Assessments WHERE COURSE_ID = %s", (course_id,))
+        rows = cur.fetchall()
+        weights = [(r[0], float(r[1]) if r[1] is not None else 0.0) for r in rows]
+        total = sum(w for _, w in weights)
+
+        if len(weights) == 0:
+            conn.commit()
+            cur.close()
+            conn.close()
+            return jsonify({'ok': True, 'updated': 0, 'total_weight': 0.0}), 200
+
+        if total == 0:
+            # 若全部為 0，平均分配
+            n = len(weights)
+            for ast, _ in weights:
+                cur.execute("UPDATE Assessments SET WEIGHT = %s WHERE AST_ID = %s AND COURSE_ID = %s", (1.0 / n, ast, course_id))
+        else:
+            factor = 1.0 / total
+            for ast, w in weights:
+                new_w = w * factor
+                cur.execute("UPDATE Assessments SET WEIGHT = %s WHERE AST_ID = %s AND COURSE_ID = %s", (new_w, ast, course_id))
+
+        # 取得更新後的清單並回傳
+        cur.execute("SELECT AST_ID, AST_NAME, WEIGHT FROM Assessments WHERE COURSE_ID = %s", (course_id,))
+        updated_rows = cur.fetchall()
+        data = rows_to_dicts(cur, updated_rows)
+        total_after = sum([float(d.get('WEIGHT') or 0) for d in data])
+
         conn.commit()
         cur.close()
         conn.close()
-        return jsonify({'ok': True, 'updated': updated, 'total_weight': float(total)}), 200
+        return jsonify({'ok': True, 'updated': True, 'total_weight': float(total_after), 'assessments': data}), 200
     except Exception as e:
         try:
             conn.rollback()
