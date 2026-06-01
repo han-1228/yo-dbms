@@ -177,17 +177,6 @@
       border-color: var(--primary-hover);
     }
 
- 
-    .action-btn-danger {
-      color: #dc2626;
-      border-color: #fca5a5;
-    }
-    .action-btn-danger:hover {
-      background-color: #fef2f2;
-      color: #b91c1c;
-      border-color: #f87171;
-    }
-
     .btn-back {
       background-color: transparent;
       border: none;
@@ -279,7 +268,6 @@
       border: 1px solid var(--primary); letter-spacing: 0;
     }
 
-
     .checkbox-cell { width: 40px; text-align: center; }
     input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; accent-color: var(--primary); }
   </style>
@@ -308,7 +296,7 @@
         <input type="text" id="search-student-input" class="round-search-input" placeholder="請輸入關鍵字...">
         <button class="action-btn action-btn-solid" onclick="searchTable('students-tbody', 'search-student-type', 'search-student-input')">搜索</button>
         
-        <button class="action-btn action-btn-danger" id="batch-delete-btn" onclick="batchDeleteStudents()">刪除</button>
+        <button class="action-btn" id="batch-delete-btn" onclick="batchDeleteStudents()">刪除</button>
 
         <button class="action-btn action-btn-solid" onclick="addStudentFrontend()">新增資料</button>
       </div>
@@ -423,17 +411,14 @@
     }
     window.addEventListener('load', () => { document.querySelectorAll('.upload-card').forEach(card => { const selectBtn = card.querySelector('.file-input-wrapper > .action-btn'); const input = card.querySelector('.file-input-hidden'); if (selectBtn && input) selectBtn.addEventListener('click', (e) => { e.preventDefault(); input.click(); }); }); });
   
-
     function toggleAllStudents(source) {
       const checkboxes = document.querySelectorAll('.student-checkbox');
       checkboxes.forEach(cb => {
-         // 只勾選目前顯示在畫面上(沒被搜尋過濾掉)的列
          if (cb.closest('tr').style.display !== 'none') {
             cb.checked = source.checked;
          }
       });
     }
-
 
     async function batchDeleteStudents() {
       const checkboxes = document.querySelectorAll('.student-checkbox:checked');
@@ -462,7 +447,6 @@
         } catch(e) {
           failCount++;
         }
-        // 即時移除畫面上的該列資料
         cb.closest('tr').remove();
       }
 
@@ -489,7 +473,7 @@
       let parts = value.split(/[,，\s]+/); let code = parts[0]; let name = parts[1] || parts[0]; let semester = parts[2] || "114-1"; 
       if (parts.length === 1) { code = "C" + Math.floor(100 + Math.random() * 800); name = parts[0]; }
       const tbody = document.getElementById('courses-tbody'); if (tbody.innerHTML.includes("等待資料載入")) tbody.innerHTML = '';
-      tbody.innerHTML = `<tr><td style="font-weight:700;">${code}</td><td>${name}</td><td>${semester}</td><td><button class="action-btn" onclick="enterCourse('${code}', '${name}')">Manage</button> <button class="action-btn action-btn-danger" style="margin-left:5px;" onclick="deleteRow(this)">刪除</button></td></tr>` + tbody.innerHTML;
+      tbody.innerHTML = `<tr><td style="font-weight:700;">${code}</td><td>${name}</td><td>${semester}</td><td><button class="action-btn" onclick="enterCourse('${code}', '${name}')">Manage</button> <button class="action-btn" style="margin-left:5px;" onclick="deleteRow(this)">刪除</button></td></tr>` + tbody.innerHTML;
       input.value = ''; alert(`🎉 成功在前端動態掛載新課程：${name}！`);
     }
 
@@ -569,7 +553,6 @@
     
     window.onload = () => { fetch(`${baseUrl}/`).catch(err => console.log("Render server warming up...")); fetchStudentsFromAPI(); fetchCoursesFromAPI(); };
     
- 
     function fetchStudentsFromAPI() { 
       const tbody = document.getElementById('students-tbody'); tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>'; 
       const selectAllCb = document.getElementById('selectAllStudents'); if (selectAllCb) selectAllCb.checked = false;
@@ -584,7 +567,7 @@
       const tbody = document.getElementById('courses-tbody'); tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>'; 
       fetch(`${baseUrl}/courses`).then(res => res.json()).then(data => { 
         tbody.innerHTML = ''; data.forEach(item => { 
-          tbody.innerHTML += `<tr><td style="font-weight:700;">${item.COURSE_ID}</td><td>${item.COURSE_NAME}</td><td>${item.SEMESTER}</td><td><button class="action-btn" onclick="enterCourse('${item.COURSE_ID}', '${item.COURSE_NAME}')">Manage</button> <button class="action-btn action-btn-danger" style="margin-left:5px;" onclick="deleteRow(this)">刪除</button></td></tr>`; 
+          tbody.innerHTML += `<tr><td style="font-weight:700;">${item.COURSE_ID}</td><td>${item.COURSE_NAME}</td><td>${item.SEMESTER}</td><td><button class="action-btn" onclick="enterCourse('${item.COURSE_ID}', '${item.COURSE_NAME}')">Manage</button> <button class="action-btn" style="margin-left:5px;" onclick="deleteRow(this)">刪除</button></td></tr>`; 
         }); 
       }).catch(()=> tbody.innerHTML = '<tr><td colspan="4" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>'); 
     }
