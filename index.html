@@ -341,7 +341,7 @@
         </div>
         <table id="pivot-scores-table"><thead id="scores-thead"></thead><tbody id="scores-tbody"><tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr></tbody></table>
       </div>
-      <div id="tab-portfolios" class="tab-content"><table><thead><tr><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th><th>作品 Portfolio</th><th>連結 Link</th><th>日期 Date</th></tr></thead><tbody id="portfolios-tbody"><tr><td colspan="6" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr></tbody></table></div>
+      <div id="tab-portfolios" class="tab-content"><table><thead><tr><th>學號 ID</th><th>評量ID</th><th>作品 Portfolio</th><th>連結 Link</th><th>更新時間</th></tr></thead><tbody id="portfolios-tbody"><tr><td colspan="5" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr></tbody></table></div>
     </div>
   </main>
 
@@ -516,7 +516,11 @@
             recalculateAllAverages();
           } else { 
             data.forEach(item => { 
-              if (type === 'roster') { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td></tr>`; } else if (type === 'portfolios') { tbody.innerHTML += `<tr><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td style="font-weight:700;">${item.STU_NAME}</td><td>${item.PORT_NAME}</td><td><a href="${item.PORT_LINK}" class="link-style" target="_blank">View File</a></td><td>${item.UPLOAD_DATE}</td></tr>`; } 
+              if (type === 'roster') { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td></tr>`; } 
+              else if (type === 'portfolios') { 
+                // 依照 import_csv.py 的欄位順序：STU_ID, AST_ID, TITLE, FILE_URL, UPLOAD_DATE
+                tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.AST_ID}</td><td style="font-weight:700;">${item.TITLE}</td><td><a href="${item.FILE_URL}" class="link-style" target="_blank">View File</a></td><td>${item.UPLOAD_DATE}</td></tr>`; 
+              } 
             }); 
           } 
         }).catch(() => tbody.innerHTML = '<tr><td style="color:#c48a7e; text-align: center; padding: 20px;">資料讀取失敗，請確認後端已更新</td></tr>'); 
