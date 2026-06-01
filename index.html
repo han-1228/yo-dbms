@@ -319,7 +319,21 @@
   </main>
 
   <script>
-    const baseUrl = 'https://yo-dbms.onrender.com/api';
+    // 優先使用 Render 上的後端（若 render 後端可用），否則降級使用相對路徑 /api
+    const RENDER_API = 'https://yo-dbms.onrender.com/api';
+    let baseUrl = RENDER_API;
+    // 快速檢查後端是否可達，若失敗改為 /api
+    (function checkApi(){
+      // 以 HEAD 或 GET 嘗試，不影響後端資料
+      fetch(RENDER_API, { method: 'GET', cache: 'no-store' }).then(r => {
+        if (!r.ok) throw new Error('not-ok');
+        console.info('[INFO] 使用 Render API:', RENDER_API);
+      }).catch(()=>{
+        baseUrl = '/api';
+        console.warn('[WARN] Render API 無法連線，已降級為相對路徑 /api');
+      });
+    })();
+
     let currentCourseId = '';
 
    
