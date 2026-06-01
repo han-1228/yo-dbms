@@ -177,6 +177,17 @@
       border-color: var(--primary-hover);
     }
 
+ 
+    .action-btn-danger {
+      color: #dc2626;
+      border-color: #fca5a5;
+    }
+    .action-btn-danger:hover {
+      background-color: #fef2f2;
+      color: #b91c1c;
+      border-color: #f87171;
+    }
+
     .btn-back {
       background-color: transparent;
       border: none;
@@ -267,6 +278,10 @@
       padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-top: 4px;
       border: 1px solid var(--primary); letter-spacing: 0;
     }
+
+
+    .checkbox-cell { width: 40px; text-align: center; }
+    input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; accent-color: var(--primary); }
   </style>
 </head>
 <body>
@@ -286,15 +301,24 @@
         <button class="action-btn" onclick="fetchStudentsFromAPI()">重新整理</button>
         <div class="toolbar-spacer"></div>
         <select id="search-student-type" class="round-search-select">
-          <option value="0">學號 ID</option>
-          <option value="3">姓名 Name</option>
-          <option value="1">班級 Class</option>
+          <option value="1">學號 ID</option>
+          <option value="4">姓名 Name</option>
+          <option value="2">班級 Class</option>
         </select>
         <input type="text" id="search-student-input" class="round-search-input" placeholder="請輸入關鍵字...">
         <button class="action-btn action-btn-solid" onclick="searchTable('students-tbody', 'search-student-type', 'search-student-input')">搜索</button>
+        
+        <button class="action-btn action-btn-danger" id="batch-delete-btn" onclick="batchDeleteStudents()">批量刪除</button>
+
+        <button class="action-btn action-btn-solid" onclick="addStudentFrontend()">新增資料</button>
       </div>
       <table>
-        <thead><tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th><th>操作 Action</th></tr></thead>
+        <thead>
+          <tr>
+            <th class="checkbox-cell"><input type="checkbox" id="selectAllStudents" onclick="toggleAllStudents(this)"></th>
+            <th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th>
+          </tr>
+        </thead>
         <tbody id="students-tbody"><tr><td colspan="5" style="text-align: center; color: #a0a0a0; padding: 30px;">等待資料載入...</td></tr></tbody>
       </table>
     </div>
@@ -311,6 +335,7 @@
         </select>
         <input type="text" id="search-course-input" class="round-search-input" placeholder="請輸入關鍵字...">
         <button class="action-btn action-btn-solid" onclick="searchTable('courses-tbody', 'search-course-type', 'search-course-input')">搜索</button>
+        <button class="action-btn action-btn-solid" onclick="addCourseFrontend()">新增資料</button>
       </div>
       <table>
         <thead><tr><th>代碼 Code</th><th>名稱 Course Name</th><th>學期 Semester</th><th>操作 Action</th></tr></thead>
@@ -398,78 +423,95 @@
     }
     window.addEventListener('load', () => { document.querySelectorAll('.upload-card').forEach(card => { const selectBtn = card.querySelector('.file-input-wrapper > .action-btn'); const input = card.querySelector('.file-input-hidden'); if (selectBtn && input) selectBtn.addEventListener('click', (e) => { e.preventDefault(); input.click(); }); }); });
   
-    function addStudentFrontend() { /* 保留備用 */ }
-    function addCourseFrontend() { /* 保留備用 */ }
 
-
-    async function saveScores() {
-      if (!currentCourseId) {
-        alert("請先選擇一門課程！");
-        return;
-      }
-
-      const btn = document.querySelector('#tab-scores .action-btn-solid');
-      const originalText = btn.innerText;
-      btn.disabled = true;
-      btn.innerText = "儲存中... ⏳";
-
-   
-      const payload = [];
-      const rows = document.querySelectorAll('#scores-tbody tr');
-
-      rows.forEach(row => {
-        const stuIdTd = row.querySelector('td:first-child');
-        if (!stuIdTd) return;
-        const stuId = stuIdTd.innerText.trim();
-
-        const inputs = row.querySelectorAll('.score-input');
-        inputs.forEach(inp => {
-          const scoreVal = inp.value.trim();
-         
-          const astId = inp.getAttribute('data-ast-id'); 
-
-          if (scoreVal !== "" && astId) {
-            payload.push({
-              STU_ID: stuId,
-              AST_ID: astId,
-              SCORE: parseFloat(scoreVal)
-            });
-          }
-        });
+    function toggleAllStudents(source) {
+      const checkboxes = document.querySelectorAll('.student-checkbox');
+      checkboxes.forEach(cb => {
+         // 只勾選目前顯示在畫面上(沒被搜尋過濾掉)的列
+         if (cb.closest('tr').style.display !== 'none') {
+            cb.checked = source.checked;
+         }
       });
-
-      if (payload.length === 0) {
-        alert("沒有找到可儲存的成績資料！");
-        btn.disabled = false;
-        btn.innerText = originalText;
-        return;
-      }
-
-      try {
-        // 發送 POST 請求到你的 app.py Endpoint
-        const res = await fetch(`${baseUrl}/course/${currentCourseId}/scores`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) {
-          const txt = await res.text().catch(()=>null);
-          throw new Error(txt || `伺服器回應 ${res.status}`);
-        }
-
-        const json = await res.json();
-        alert(`🎉 成績儲存成功！\n資料庫回應 - 新增: ${json.inserted} 筆 / 更新: ${json.updated} 筆`);
-      } catch (err) {
-        alert(`儲存失敗：${err.message || err}`);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = originalText;
-      }
     }
 
+
+    async function batchDeleteStudents() {
+      const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+      if (checkboxes.length === 0) {
+        alert("請先在左側勾選要刪除的學生！");
+        return;
+      }
+      if (!confirm(`確定要刪除這 ${checkboxes.length} 筆資料嗎？\n(將同步刪除該學生的修課與成績紀錄)`)) {
+        return;
+      }
+
+      const btn = document.getElementById('batch-delete-btn');
+      const origText = btn.innerText;
+      btn.innerText = "處理中...";
+      btn.disabled = true;
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (let cb of checkboxes) {
+        const stuId = cb.value;
+        try {
+          const res = await fetch(`${baseUrl}/students/${stuId}`, { method: 'DELETE' });
+          if (res.ok) successCount++;
+          else failCount++;
+        } catch(e) {
+          failCount++;
+        }
+        // 即時移除畫面上的該列資料
+        cb.closest('tr').remove();
+      }
+
+      btn.innerText = origText;
+      btn.disabled = false;
+      alert(`刪除完畢！成功: ${successCount} 筆` + (failCount > 0 ? `, 失敗: ${failCount} 筆 (可能是前端動態假資料)` : ''));
+      
+      const selectAllCb = document.getElementById('selectAllStudents');
+      if(selectAllCb) selectAllCb.checked = false;
+    }
+
+
+    function addStudentFrontend() { 
+      const input = document.getElementById('add-student-input'); const value = input.value.trim(); if (!value) { alert("請先輸入要新增的資料！"); return; }
+      let parts = value.split(/[,，\s]+/); let id = parts[0], className = parts[1] || "光子學程", seatNum = parts[2] || Math.floor(1 + Math.random() * 40), name = parts[3] || parts[0];
+      if (parts.length === 1) { id = "S" + Math.floor(15000 + Math.random() * 500); name = parts[0]; }
+      const tbody = document.getElementById('students-tbody'); if (tbody.innerHTML.includes("等待資料載入")) tbody.innerHTML = '';
+      tbody.innerHTML = `<tr><td class="checkbox-cell"><input type="checkbox" class="student-checkbox" value="${id}"></td><td style="font-weight:700;">${id}</td><td>${className}</td><td>${seatNum}</td><td style="font-weight:700;">${name}</td></tr>` + tbody.innerHTML;
+      input.value = ''; alert(`🎉 成功在前端動態掛載新學生：${name}！`);
+    }
+
+    function addCourseFrontend() {
+      const input = document.getElementById('add-course-input'); const value = input.value.trim(); if (!value) { alert("請先輸入要新增的課程資料！"); return; }
+      let parts = value.split(/[,，\s]+/); let code = parts[0]; let name = parts[1] || parts[0]; let semester = parts[2] || "114-1"; 
+      if (parts.length === 1) { code = "C" + Math.floor(100 + Math.random() * 800); name = parts[0]; }
+      const tbody = document.getElementById('courses-tbody'); if (tbody.innerHTML.includes("等待資料載入")) tbody.innerHTML = '';
+      tbody.innerHTML = `<tr><td style="font-weight:700;">${code}</td><td>${name}</td><td>${semester}</td><td><button class="action-btn" onclick="enterCourse('${code}', '${name}')">Manage</button> <button class="action-btn action-btn-danger" style="margin-left:5px;" onclick="deleteRow(this)">刪除</button></td></tr>` + tbody.innerHTML;
+      input.value = ''; alert(`🎉 成功在前端動態掛載新課程：${name}！`);
+    }
+
+    async function saveScores() {
+      if (!currentCourseId) { alert("請先選擇一門課程！"); return; }
+      const btn = document.querySelector('#tab-scores .action-btn-solid'); const originalText = btn.innerText; btn.disabled = true; btn.innerText = "儲存中... ⏳";
+      const payload = []; const rows = document.querySelectorAll('#scores-tbody tr');
+      rows.forEach(row => {
+        const stuIdTd = row.querySelector('td:first-child'); if (!stuIdTd) return; const stuId = stuIdTd.innerText.trim();
+        const inputs = row.querySelectorAll('.score-input');
+        inputs.forEach(inp => {
+          const scoreVal = inp.value.trim(); const astId = inp.getAttribute('data-ast-id'); 
+          if (scoreVal !== "" && astId) { payload.push({ STU_ID: stuId, AST_ID: astId, SCORE: parseFloat(scoreVal) }); }
+        });
+      });
+      if (payload.length === 0) { alert("沒有找到可儲存的成績資料！"); btn.disabled = false; btn.innerText = originalText; return; }
+      try {
+        const res = await fetch(`${baseUrl}/course/${currentCourseId}/scores`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (!res.ok) { const txt = await res.text().catch(()=>null); throw new Error(txt || `伺服器回應 ${res.status}`); }
+        const json = await res.json(); alert(`🎉 成績儲存成功！\n資料庫回應 - 新增: ${json.inserted} 筆 / 更新: ${json.updated} 筆`);
+      } catch (err) { alert(`儲存失敗：${err.message || err}`); } finally { btn.disabled = false; btn.innerText = originalText; }
+    }
 
     function fetchCourseData(courseId, type) { 
       const tbody = document.getElementById(`${type}-tbody`); 
@@ -518,7 +560,6 @@
             data.forEach(item => { 
               if (type === 'roster') { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td></tr>`; } 
               else if (type === 'portfolios') { 
-                // 依照 import_csv.py 的欄位順序：STU_ID, AST_ID, TITLE, FILE_URL, UPLOAD_DATE
                 tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.AST_ID}</td><td style="font-weight:700;">${item.TITLE}</td><td><a href="${item.FILE_URL}" class="link-style" target="_blank">View File</a></td><td>${item.UPLOAD_DATE}</td></tr>`; 
               } 
             }); 
@@ -528,17 +569,23 @@
     
     window.onload = () => { fetch(`${baseUrl}/`).catch(err => console.log("Render server warming up...")); fetchStudentsFromAPI(); fetchCoursesFromAPI(); };
     
+ 
     function fetchStudentsFromAPI() { 
       const tbody = document.getElementById('students-tbody'); tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>'; 
+      const selectAllCb = document.getElementById('selectAllStudents'); if (selectAllCb) selectAllCb.checked = false;
       fetch(`${baseUrl}/students`).then(res => res.json()).then(data => { 
-        tbody.innerHTML = ''; data.forEach(item => { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td><td><button class="action-btn" onclick="deleteRow(this)">刪除</button></td></tr>`; }); 
+        tbody.innerHTML = ''; data.forEach(item => { 
+          tbody.innerHTML += `<tr><td class="checkbox-cell"><input type="checkbox" class="student-checkbox" value="${item.STU_ID}"></td><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td></tr>`; 
+        }); 
       }).catch(()=> tbody.innerHTML = '<tr><td colspan="5" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>'); 
     }
     
     function fetchCoursesFromAPI() { 
       const tbody = document.getElementById('courses-tbody'); tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>'; 
       fetch(`${baseUrl}/courses`).then(res => res.json()).then(data => { 
-        tbody.innerHTML = ''; data.forEach(item => { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.COURSE_ID}</td><td>${item.COURSE_NAME}</td><td>${item.SEMESTER}</td><td><button class="action-btn" onclick="enterCourse('${item.COURSE_ID}', '${item.COURSE_NAME}')">Manage</button> <button class="action-btn" style="margin-left:5px;" onclick="deleteRow(this)">刪除</button></td></tr>`; }); 
+        tbody.innerHTML = ''; data.forEach(item => { 
+          tbody.innerHTML += `<tr><td style="font-weight:700;">${item.COURSE_ID}</td><td>${item.COURSE_NAME}</td><td>${item.SEMESTER}</td><td><button class="action-btn" onclick="enterCourse('${item.COURSE_ID}', '${item.COURSE_NAME}')">Manage</button> <button class="action-btn action-btn-danger" style="margin-left:5px;" onclick="deleteRow(this)">刪除</button></td></tr>`; 
+        }); 
       }).catch(()=> tbody.innerHTML = '<tr><td colspan="4" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>'); 
     }
   </script>
