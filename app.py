@@ -244,10 +244,10 @@ def get_course_portfolios(course_id):
     try:
         conn = get_mysql_connection()
         cur = conn.cursor()
+        # 只回傳前端需要的欄位：STU_ID, AST_ID, TITLE, FILE_URL, UPLOAD_DATE
         cur.execute(
-            "SELECT p.PORTFO_ID, p.STU_ID, s.STU_NAME, p.COURSE_ID, p.AST_ID, p.TITLE, p.FILE_URL, p.UPLOAD_DATE "
+            "SELECT p.STU_ID, p.AST_ID, p.TITLE, p.FILE_URL, p.UPLOAD_DATE "
             "FROM Portfolios p "
-            "JOIN Students s ON p.STU_ID = s.STU_ID "
             "WHERE p.COURSE_ID = %s",
             (course_id,)
         )
