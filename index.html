@@ -278,8 +278,13 @@
       <div class="action-toolbar">
         <button class="action-btn" onclick="fetchCoursesFromAPI()">重新整理</button>
         <div class="toolbar-spacer"></div>
-        <input type="text" id="add-course-input" class="round-search-input" placeholder="請輸入課程代碼、名稱、學期...">
-        <button class="action-btn action-btn-solid" onclick="addCourseFrontend()">新增資料</button>
+        <select id="course-search-field" class="round-search-input" style="width:160px; padding:10px;">
+          <option value="COURSE_ID">課程代碼</option>
+          <option value="COURSE_NAME">名稱</option>
+          <option value="SEMESTER">學期</option>
+        </select>
+        <input type="text" id="course-search-input" class="round-search-input" placeholder="輸入關鍵字...">
+        <button class="action-btn action-btn-solid" onclick="performCourseSearch()">搜尋</button>
       </div>
       <table>
         <thead><tr><th>代碼 Code</th><th>名稱 Course Name</th><th>學期 Semester</th><th>操作 Action</th></tr></thead>
@@ -429,11 +434,30 @@
 
 
     // Fetch
-    function fetchCourseData(courseId, type) { const tbody = document.getElementById(`${type}-tbody`); tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">資料載入中...</td></tr>`; fetch(`${baseUrl}/course/${courseId}/${type}`).then(res => res.json()).then(data => { tbody.innerHTML = ''; if(data.length === 0) { tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">目前沒有資料</td></tr>`; return; } if (type === 'scores') { const thead = document.getElementById('scores-thead'); thead.innerHTML = ''; let assessmentItems = []; data.forEach(row => { if (!assessmentItems.includes(row.AST_NAME)) { assessmentItems.push(row.AST_NAME); } }); let headerHtml = `<tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th>`; assessmentItems.forEach(item => { headerHtml += `<th>${item}</th>`; }); headerHtml += `<th style="color: var(--primary);">總平均 AVG</th></tr>`; thead.innerHTML = headerHtml; let studentMatrix = {}; data.forEach(row => { if (!studentMatrix[row.STU_ID]) { studentMatrix[row.STU_ID] = { id: row.STU_ID, name: row.STU_NAME, className: row.CLASS_NAME, seatNum: row.SEAT_NUM, grades: {} }; } studentMatrix[row.STU_ID].grades[row.AST_NAME] = row.SCORE; }); Object.values(studentMatrix).forEach(student => { let rowHtml = `<tr><td style="font-weight:700;">${student.id}</td><td>${student.className}</td><td>${student.seatNum}</td><td style="font-weight:700;">${student.name}</td>`; let totalScore = 0; let assessCount = assessmentItems.length; assessmentItems.forEach(item => { let scoreValue = student.grades[item] !== undefined ? student.grades[item] : ''; if(scoreValue !== '') totalScore += parseFloat(scoreValue); rowHtml += `<td><input type="number" class="score-input" value="${scoreValue}" oninput="calculateRowAverage(this)"></td>`; }); let initialAvg = assessCount > 0 ? (totalScore / assessCount).toFixed(1) : 0; rowHtml += `<td class="avg-display">${initialAvg}</td>`; rowHtml += `</tr>`; tbody.innerHTML += rowHtml; }); } else { data.forEach(item => { if (type === 'roster') { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td></tr>`; } else if (type === 'portfolios') { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.AST_ID}</td><td style="font-weight:700;">${item.TITLE || item.PORT_NAME || ''}</td><td><a href="${item.FILE_URL || item.PORT_LINK || '#'}" class="link-style" target="_blank">View File</a></td><td>${item.UPLOAD_DATE}</td></tr>`; } }); } }).catch(() => tbody.innerHTML = '<tr><td style="color:#c48a7e; text-align: center; padding: 20px;">資料讀取失敗，請確認後端已更新</td></tr>'); }
+    function fetchCourseData(courseId, type) { const tbody = document.getElementById(`${type}-tbody`); tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">資料載入中...</td></tr>`; fetch(`${baseUrl}/course/${courseId}/${type}`).then(res => res.json()).then(data => { tbody.innerHTML = ''; if(data.length === 0) { tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">目前沒有資料</td></tr>`; return; } if (type === 'scores') { const thead = document.getElementById('scores-thead'); thead.innerHTML = ''; let assessmentItems = []; data.forEach(row => { if (!assessmentItems.includes(row.AST_NAME)) { assessmentItems.push(row.AST_NAME); } }); let headerHtml = `<tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th>`; assessmentItems.forEach(item => { headerHtml += `<th>${item}</th>`; }); headerHtml += `<th style="color: var(--primary);">總平均 AVG</th></tr>`; thead.innerHTML = headerHtml; let studentMatrix = {}; data.forEach(row => { if (!studentMatrix[row.STU_ID]) { studentMatrix[row.STU_ID] = { id: row.STU_ID, name: row.STU_NAME, className: row.CLASS_NAME, seatNum: row.SEAT_NUM, grades: {} }; } studentMatrix[row.STU_ID].grades[row.AST_NAME] = row.SCORE; }); Object.values(studentMatrix).forEach(student => { let rowHtml = `<tr><td style="font-weight:700;">${student.id}</td><td>${student.className}</td><td>${student.seatNum}</td><td style="font-weight:700;">${student.name}</td>`; let totalScore = 0; let assessCount = assessmentItems.length; assessmentItems.forEach(item => { let scoreValue = student.grades[item] !== undefined ? student.grades[item] : ''; if(scoreValue !== '') totalScore += parseFloat(scoreValue); rowHtml += `<td><input type="number" class="score-input" value="${scoreValue}" oninput="calculateRowAverage(this)"></td>`; }); let initialAvg = assessCount > 0 ? (totalScore / assessCount).toFixed(1) : 0; rowHtml += `<td class="avg-display">${initialAvg}</td>`; rowHtml += `</tr>`; tbody.innerHTML += rowHtml; }); } else { data.forEach(item => { if (type === 'roster') { tbody.innerHTML += `<tr data-stu="${item.STU_ID}"><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td><td><button class="action-btn" onclick="fetchRemoveEnrollment('${courseId}', '${item.STU_ID}', this)">刪除此列</button></td></tr>`; } else if (type === 'portfolios') { tbody.innerHTML += `<tr data-port="${item.PORTFO_ID}"><td style="font-weight:700;">${item.STU_ID}</td><td>${item.AST_ID}</td><td style="font-weight:700;">${item.TITLE || item.PORT_NAME || ''}</td><td><a href="${item.FILE_URL || item.PORT_LINK || '#'}" class="link-style" target="_blank">View File</a></td><td>${item.UPLOAD_DATE}</td><td><button class="action-btn" onclick="fetchDeletePortfolio('${courseId}', '${item.PORTFO_ID}', this)">刪除</button></td></tr>`; } }); } }).catch(() => tbody.innerHTML = '<tr><td style="color:#c48a7e; text-align: center; padding: 20px;">資料讀取失敗，請確認後端已更新</td></tr>'); }
     window.onload = () => { fetch(`${baseUrl}/`).catch(err => console.log("Render server warming up...")); fetchStudentsFromAPI(); fetchCoursesFromAPI(); };
     function fetchStudentsFromAPI() { const tbody = document.getElementById('students-tbody'); tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>'; fetch(`${baseUrl}/students`).then(res => res.json()).then(data => { tbody.innerHTML = ''; if(data.length === 0){ tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#a0a0a0; padding:30px;">目前沒有資料</td></tr>'; return;} data.forEach(item => { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td><td><button class="action-btn" onclick="fetchDeleteStudent('${item.STU_ID}')">刪除</button></td></tr>`; }); }).catch(()=> tbody.innerHTML = '<tr><td colspan="4" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>'); }
 
     function fetchCoursesFromAPI() { const tbody = document.getElementById('courses-tbody'); tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">資料載入中...</td></tr>'; fetch(`${baseUrl}/courses`).then(res => res.json()).then(data => { tbody.innerHTML = ''; if(data.length === 0){ tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#a0a0a0; padding:30px;">目前沒有資料</td></tr>'; return;} data.forEach(item => { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.COURSE_ID}</td><td>${item.COURSE_NAME}</td><td>${item.SEMESTER}</td><td><button class="action-btn" onclick="enterCourse('${item.COURSE_ID}', '${item.COURSE_NAME}')">Manage</button> <button class="action-btn" onclick="fetchDeleteCourse('${item.COURSE_ID}')">刪除</button></td></tr>`; }); }).catch(()=> tbody.innerHTML = '<tr><td colspan="4" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>'); }
+
+    // 新增：依欄位搜尋課程（前端過濾）
+    function performCourseSearch(){
+      const field = document.getElementById('course-search-field').value;
+      const q = document.getElementById('course-search-input').value.trim().toLowerCase();
+      const tbody = document.getElementById('courses-tbody');
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 30px;">搜尋中...</td></tr>';
+      fetch(`${baseUrl}/courses`).then(res => res.json()).then(data => {
+        tbody.innerHTML = '';
+        const filtered = data.filter(item => {
+          const val = (item[field] || '').toString().toLowerCase();
+          return q === '' ? true : val.includes(q);
+        });
+        if(filtered.length === 0){ tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#a0a0a0; padding:30px;">沒有符合的課程</td></tr>'; return; }
+        filtered.forEach(item => {
+          tbody.innerHTML += `<tr><td style="font-weight:700;">${item.COURSE_ID}</td><td>${item.COURSE_NAME}</td><td>${item.SEMESTER}</td><td><button class="action-btn" onclick="enterCourse('${item.COURSE_ID}', '${item.COURSE_NAME}')">Manage</button> <button class="action-btn" onclick="fetchDeleteCourse('${item.COURSE_ID}')">刪除</button></td></tr>`;
+        });
+      }).catch(()=> tbody.innerHTML = '<tr><td colspan="4" style="color:#c48a7e; text-align: center; padding: 30px;">連線錯誤</td></tr>');
+    }
 
     async function fetchDeleteStudent(stuId){
       // 第一次確認
@@ -464,6 +488,30 @@
         alert(`刪除完成：${JSON.stringify(json.deleted)}`);
         fetchCoursesFromAPI();
         if(currentCourseId === courseId){ switchMainView('courses'); currentCourseId = ''; }
+      }catch(err){ alert(`刪除失敗：${err.message || err}`); }
+    }
+
+    // 新增刪除函式
+    async function fetchRemoveEnrollment(courseId, stuId, btnElem){
+      if(!confirm(`確定要刪除此學生 ${stuId} 的修課紀錄嗎？相關成績與作品也會一併刪除。`)) return;
+      try{
+        const res = await fetch(`${baseUrl}/course/${courseId}/enrollments/${stuId}`, { method: 'DELETE' });
+        if(!res.ok){ const txt = await res.text().catch(()=>null); throw new Error(txt || `伺服器回應 ${res.status}`); }
+        const json = await res.json();
+        alert(`刪除完成：${JSON.stringify(json.deleted)}`);
+        // 移除列
+        const tr = btnElem.closest('tr'); if(tr) tr.remove();
+      }catch(err){ alert(`刪除失敗：${err.message || err}`); }
+    }
+
+    async function fetchDeletePortfolio(courseId, portfoId, btnElem){
+      if(!confirm(`確定要刪除作品 ${portfoId} 嗎？`)) return;
+      try{
+        const res = await fetch(`${baseUrl}/course/${courseId}/portfolios/${portfoId}`, { method: 'DELETE' });
+        if(!res.ok){ const txt = await res.text().catch(()=>null); throw new Error(txt || `伺服器回應 ${res.status}`); }
+        const json = await res.json();
+        alert(`刪除完成：${json.deleted} 筆`);
+        const tr = btnElem.closest('tr'); if(tr) tr.remove();
       }catch(err){ alert(`刪除失敗：${err.message || err}`); }
     }
   </script>

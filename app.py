@@ -244,9 +244,9 @@ def get_course_portfolios(course_id):
     try:
         conn = get_mysql_connection()
         cur = conn.cursor()
-        # 只回傳前端需要的欄位：STU_ID, AST_ID, TITLE, FILE_URL, UPLOAD_DATE
+        # 回傳前端需要的欄位：PORTFO_ID, STU_ID, AST_ID, TITLE, FILE_URL, UPLOAD_DATE
         cur.execute(
-            "SELECT p.STU_ID, p.AST_ID, p.TITLE, p.FILE_URL, p.UPLOAD_DATE "
+            "SELECT p.PORTFO_ID, p.STU_ID, p.AST_ID, p.TITLE, p.FILE_URL, p.UPLOAD_DATE "
             "FROM Portfolios p "
             "WHERE p.COURSE_ID = %s",
             (course_id,)
@@ -366,6 +366,93 @@ def api_echo():
             'json': request.get_json(silent=True)
         }
         return jsonify({'echo': data}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/course/<course_id>/enrollments/<stu_id>', methods=['DELETE'])
+def remove_enrollment(course_id, stu_id):
+    """刪除某學生在指定課程的修課紀錄，同步刪除該課程相關的成績與作品（若有）。"""
+    try:
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        conn.start_transaction()
+        # 1) 刪除該學生在此課程評量相關的成績（透過 Assessments 找出 AST_ID）
+        cur.execute("SELECT AST_ID FROM Assessments WHERE COURSE_ID = %s", (course_id,))
+        ast_rows = cur.fetchall()
+        ast_ids = [r[0] for r in ast_rows]
+        scores_deleted = 0
+        if ast_ids:
+            placeholders = ','.join(['%s'] * len(ast_ids))
+            cur.execute(f"DELETE FROM Scores WHERE STU_ID = %s AND AST_ID IN ({placeholders})", tuple([stu_id] + ast_ids))
+            scores_deleted = cur.rowcount
+        # 2) 刪除該學生在此課程的作品
+        cur.execute("DELETE FROM Portfolios WHERE STU_ID = %s AND COURSE_ID = %s", (stu_id, course_id))
+        portfolios_deleted = cur.rowcount
+        # 3) 刪除修課紀錄
+        cur.execute("DELETE FROM Enrollments WHERE STU_ID = %s AND COURSE_ID = %s", (stu_id, course_id))
+        enrollments_deleted = cur.rowcount
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({
+            'ok': True,
+            'deleted': {
+                'enrollments': enrollments_deleted,
+                'scores': scores_deleted,
+                'portfolios': portfolios_deleted
+            }
+        }), 200
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/course/<course_id>/portfolios/<portfo_id>', methods=['DELETE'])
+def delete_portfolio(course_id, portfo_id):
+    """刪除單一作品（依 PORTFO_ID），只處理該筆作品。"""
+    try:
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM Portfolios WHERE PORTFO_ID = %s AND COURSE_ID = %s", (portfo_id, course_id))
+        deleted = cur.rowcount
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'ok': True, 'deleted': deleted}), 200
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/courses/search', methods=['GET'])
+def search_courses():
+    """後端搜尋課程：接受 query params 'field' 與 'q'，在指定欄位做 SQL LIKE 搜尋。
+    field 可為 COURSE_ID, COURSE_NAME, SEMESTER。
+    若 q 為空則回傳全部課程。
+    """
+    try:
+        field = request.args.get('field', 'COURSE_ID')
+        q = request.args.get('q', '') or ''
+        allowed = {'COURSE_ID', 'COURSE_NAME', 'SEMESTER'}
+        if field not in allowed:
+            return jsonify({'error': 'invalid field parameter'}), 400
+
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        if q.strip() == '':
+            cur.execute("SELECT COURSE_ID, COURSE_NAME, SEMESTER FROM Courses")
+        else:
+            sql = f"SELECT COURSE_ID, COURSE_NAME, SEMESTER FROM Courses WHERE {field} LIKE %s"
+            cur.execute(sql, (f"%{q}%",))
+        rows = cur.fetchall()
+        data = rows_to_dicts(cur, rows)
+        cur.close()
+        conn.close()
+        return jsonify(data), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
