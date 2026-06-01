@@ -481,3 +481,13 @@
         }).catch(err => alert('更新失敗'));
       }).catch(() => alert('無法取得評量資料'));
     }
+
+    // 全域錯誤處理（方便偵錯）
+    window.onerror = function(message, source, lineno, colno, error) {
+      try { console.error('Global JS error:', message, source, lineno, colno, error); } catch(e){}
+      alert('前端發生錯誤，請打開開發者工具檢查 console');
+      return false;
+    };
+  </script>
+</body>
+</html>
