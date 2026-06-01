@@ -257,35 +257,19 @@ def get_course_roster(course_id):
 
 @app.route('/api/course/<course_id>/portfolios', methods=['GET'])
 def get_course_portfolios(course_id):
+    """取得某課程的所有作品，包含學生班級、座號、姓名、作品標題、連結、上傳日期。"""
     try:
         conn = get_mysql_connection()
         cur = conn.cursor()
         query = """
             SELECT s.CLASS_NAME, s.SEAT_NUM, s.STU_NAME, 
-                   p.TITLE AS PORT_NAME, p.FILE_URL AS PORT_LINK, p.UPLOAD_DATE 
+                   p.TITLE, p.FILE_URL, p.UPLOAD_DATE 
             FROM Portfolios p 
             JOIN Students s ON p.STU_ID = s.STU_ID 
             WHERE p.COURSE_ID = %s
         """
         
         cur.execute(query, (course_id,))
-        rows = cur.fetchall()
-        data = rows_to_dicts(cur, rows)
-        cur.close()
-        conn.close()
-        return jsonify(data), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/course/<course_id>/portfolios', methods=['GET'])
-def get_course_portfolios(course_id):
-    try:
-        conn = get_mysql_connection()
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT PORTFO_ID, STU_ID, PORT_NAME, PORT_LINK, UPLOAD_DATE FROM Portfolios WHERE COURSE_ID = %s",
-            (course_id,)
-        )
         rows = cur.fetchall()
         data = rows_to_dicts(cur, rows)
         cur.close()
