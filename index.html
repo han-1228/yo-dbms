@@ -319,20 +319,8 @@
   </main>
 
   <script>
-    // 優先使用 Render 上的後端（若 render 後端可用），否則降級使用相對路徑 /api
-    const RENDER_API = 'https://yo-dbms.onrender.com/api';
-    let baseUrl = RENDER_API;
-    // 快速檢查後端是否可達，若失敗改為 /api
-    (function checkApi(){
-      // 以 HEAD 或 GET 嘗試，不影響後端資料
-      fetch(RENDER_API, { method: 'GET', cache: 'no-store' }).then(r => {
-        if (!r.ok) throw new Error('not-ok');
-        console.info('[INFO] 使用 Render API:', RENDER_API);
-      }).catch(()=>{
-        baseUrl = '/api';
-        console.warn('[WARN] Render API 無法連線，已降級為相對路徑 /api');
-      });
-    })();
+    // 固定使用 Render 上的後端 API（適合部署到 GitHub Pages）
+    const baseUrl = 'https://yo-dbms.onrender.com/api';
 
     let currentCourseId = '';
 
@@ -361,14 +349,14 @@
       const avgCell = tr.querySelector('.avg-display');
       const courseId = currentCourseId;
       const weightMap = assessmentWeightMap[courseId] || {};
-      let total = 0, weightSum = 0;
+      let total = 0;
       inputs.forEach(inp => {
         const astName = inp.dataset.ast || inp.getAttribute('data-ast');
         const w = weightMap[astName] || 0;
         const val = parseFloat(inp.value);
-        if(!isNaN(val)) { total += val * w; weightSum += w; }
+        if(!isNaN(val)) { total += val * w; }
       });
-      const avg = weightSum > 0 ? (total / weightSum).toFixed(1) : 0;
+      const avg = (total).toFixed(1);
       avgCell.innerText = avg;
     }
 
@@ -400,7 +388,7 @@
           const assessmentItems = assessments.map(a => a.AST_NAME);
           const thead = document.getElementById('scores-thead');
           let headerHtml = `<tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th>`;
-          assessments.forEach(a => { const pct = (parseFloat(a.WEIGHT) || 0) * 100; headerHtml += `<th><button class="action-btn" style="padding:6px 10px; border-radius:8px; font-weight:700; font-size:12px;" onclick="promptEditWeight('${a.AST_ID}','${courseId}')">${a.AST_NAME}<div style=\\"font-size:11px; font-weight:400; color:var(--text-muted)\\">${pct.toFixed(0)}%</div></button></th>`; });
+          assessments.forEach(a => { const dec = parseFloat(a.WEIGHT) || 0; headerHtml += `<th><button class="action-btn" style="padding:6px 10px; border-radius:8px; font-weight:700; font-size:12px;" onclick="promptEditWeight('${a.AST_ID}','${courseId}')">${a.AST_NAME}<div style=\\"font-size:11px; font-weight:400; color:var(--text-muted)\\">${dec.toFixed(2)}</div></button></th>`; });
           headerHtml += `<th style="color: var(--primary);">總平均 AVG</th></tr>`;
           thead.innerHTML = headerHtml;
 
@@ -421,9 +409,9 @@
               rowHtml += `<td><input type="number" class="score-input" data-ast="${item}" value="${scoreValue}" oninput="calculateRowAverageWeighted(this)"></td>`;
             });
             // 計算初始加權平均
-            let total = 0, wsum = 0;
-            assessmentItems.forEach(item => { const sv = student.grades[item]; const w = weightMap[item] || 0; if (sv !== undefined && sv !== null && sv !== '') { total += parseFloat(sv) * w; wsum += w; } });
-            const avgDisplay = wsum > 0 ? (total / wsum).toFixed(1) : 0;
+            let total = 0;
+            assessmentItems.forEach(item => { const sv = student.grades[item]; const w = weightMap[item] || 0; if (sv !== undefined && sv !== null && sv !== '') { total += parseFloat(sv) * w; } });
+            const avgDisplay = (total).toFixed(1);
             rowHtml += `<td class="avg-display">${avgDisplay}</td>`;
             rowHtml += `</tr>`;
             tbodyHtml += rowHtml;
@@ -617,7 +605,7 @@
           const assessmentItems = assessments.map(a => a.AST_NAME);
           const thead = document.getElementById('scores-thead');
           let headerHtml = `<tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th>`;
-          assessments.forEach(a => { const pct = (parseFloat(a.WEIGHT) || 0) * 100; headerHtml += `<th><button class="action-btn" style="padding:6px 10px; border-radius:8px; font-weight:700; font-size:12px;" onclick="promptEditWeight('${a.AST_ID}','${courseId}')">${a.AST_NAME}<div style=\\"font-size:11px; font-weight:400; color:var(--text-muted)\\">${pct.toFixed(0)}%</div></button></th>`; });
+          assessments.forEach(a => { const dec = parseFloat(a.WEIGHT) || 0; headerHtml += `<th><button class="action-btn" style="padding:6px 10px; border-radius:8px; font-weight:700; font-size:12px;" onclick="promptEditWeight('${a.AST_ID}','${courseId}')">${a.AST_NAME}<div style=\\"font-size:11px; font-weight:400; color:var(--text-muted)\\">${dec.toFixed(2)}</div></button></th>`; });
           headerHtml += `<th style="color: var(--primary);">總平均 AVG</th></tr>`;
           thead.innerHTML = headerHtml;
 
@@ -638,9 +626,9 @@
               rowHtml += `<td><input type="number" class="score-input" data-ast="${item}" value="${scoreValue}" oninput="calculateRowAverageWeighted(this)"></td>`;
             });
             // 計算初始加權平均
-            let total = 0, wsum = 0;
-            assessmentItems.forEach(item => { const sv = student.grades[item]; const w = weightMap[item] || 0; if (sv !== undefined && sv !== null && sv !== '') { total += parseFloat(sv) * w; wsum += w; } });
-            const avgDisplay = wsum > 0 ? (total / wsum).toFixed(1) : 0;
+            let total = 0;
+            assessmentItems.forEach(item => { const sv = student.grades[item]; const w = weightMap[item] || 0; if (sv !== undefined && sv !== null && sv !== '') { total += parseFloat(sv) * w; } });
+            const avgDisplay = (total).toFixed(1);
             rowHtml += `<td class="avg-display">${avgDisplay}</td>`;
             rowHtml += `</tr>`;
             tbodyHtml += rowHtml;
@@ -660,12 +648,14 @@
         if(!ast){ alert('找不到評量資料'); return; }
         const current = parseFloat(ast.WEIGHT) || 0;
         // 預設顯示小數 (0~1)
-        let input = prompt(`請輸入 ${ast.AST_NAME} 的權重（請輸入小數，例如 0.3 表示 30%）：`, (current).toFixed(2));
+        let input = prompt(`請輸入 ${ast.AST_NAME} 的權重（可輸入小數 0~1）：`, (current).toFixed(2));
         if(input === null) return; input = input.toString().trim(); if(input === '') return;
+
+        // 僅接受 0~1 的小數作為權重
         let val = parseFloat(input);
-        if(isNaN(val)){ alert('輸入不是數字'); return; }
-        // 強制只接受 0~1 的小數，拒絕百分比形式
-        if(val < 0 || val > 1){ alert('權重必須為介於 0 與 1 的小數（例如 0.25）'); return; }
+        if (isNaN(val)) { alert('輸入不是數字，例如 0.25'); return; }
+        if (val < 0 || val > 1) { alert('權重必須介於 0 與 1 之間（請以小數表示，例如 0.25）'); return; }
+
         // 呼叫後端更新
         fetch(`${baseUrl}/course/${courseId}/assessments/${astId}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ weight: val }) }).then(res => res.json()).then(js => {
           if(js.error){ alert('更新失敗：' + js.error); return; }
@@ -680,7 +670,7 @@
             delete assessmentCache[courseId];
             delete assessmentWeightMap[courseId];
           }
-          alert(`更新完成，課程總權重：${(js.total_weight*100).toFixed(1)}%`);
+          alert(`更新完成，課程總權重：${(js.total_weight).toFixed(3)}`);
           // 重新載入評量與成績（使用已更新過的快取）
           fetchCourseData(courseId, 'scores');
         }).catch(err => alert('更新失敗'));

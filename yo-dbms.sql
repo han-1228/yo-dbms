@@ -59,18 +59,17 @@ CREATE TABLE Portfolios (
     FOREIGN KEY (AST_ID) REFERENCES Assessments(AST_ID)
 );
 
--- Trigger: after insert/update normalize weights per course
+-- Triggers: 新增/更新 Assessments 後自動正規化權重
 DELIMITER $$
 DROP TRIGGER IF EXISTS tr_assess_norm_after_insert $$
 CREATE TRIGGER tr_assess_norm_after_insert
 AFTER INSERT ON Assessments
 FOR EACH ROW
 BEGIN
-  -- 避免觸發器內部再次觸發無窮迴圈，使用 session 變數作為鎖
+  DECLARE _sum DOUBLE DEFAULT 0;
+  DECLARE _cnt INT DEFAULT 0;
   IF @__assess_norm_lock IS NULL OR @__assess_norm_lock = 0 THEN
     SET @__assess_norm_lock = 1;
-    DECLARE _sum DOUBLE DEFAULT 0;
-    DECLARE _cnt INT DEFAULT 0;
     SELECT SUM(WEIGHT) INTO _sum FROM Assessments WHERE COURSE_ID = NEW.COURSE_ID;
     IF _sum IS NULL OR _sum = 0 THEN
       SELECT COUNT(*) INTO _cnt FROM Assessments WHERE COURSE_ID = NEW.COURSE_ID;
@@ -89,10 +88,10 @@ CREATE TRIGGER tr_assess_norm_after_update
 AFTER UPDATE ON Assessments
 FOR EACH ROW
 BEGIN
+  DECLARE _sum2 DOUBLE DEFAULT 0;
+  DECLARE _cnt2 INT DEFAULT 0;
   IF @__assess_norm_lock IS NULL OR @__assess_norm_lock = 0 THEN
     SET @__assess_norm_lock = 1;
-    DECLARE _sum2 DOUBLE DEFAULT 0;
-    DECLARE _cnt2 INT DEFAULT 0;
     SELECT SUM(WEIGHT) INTO _sum2 FROM Assessments WHERE COURSE_ID = NEW.COURSE_ID;
     IF _sum2 IS NULL OR _sum2 = 0 THEN
       SELECT COUNT(*) INTO _cnt2 FROM Assessments WHERE COURSE_ID = NEW.COURSE_ID;

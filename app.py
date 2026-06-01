@@ -156,6 +156,29 @@ def init_db_from_csv_mysql():
             if os.path.exists(path):
                 import_csv_to_mysql(cursor, table_name, path, query)
 
+        # 轉換：若 Assessments 裡的 WEIGHT 是以百分比 (例如 30 或 100) 儲存（>1），自動除以 100 轉為小數
+        try:
+            cursor.execute("SELECT COUNT(*) FROM Assessments WHERE WEIGHT > 1")
+            cnt_row = cursor.fetchone()
+            cnt = cnt_row[0] if cnt_row else 0
+            if cnt and cnt > 0:
+                print(f"發現 {cnt} 筆 Assessments.WEIGHT > 1，將視為百分比並除以 100 轉為小數...")
+                cursor.execute("UPDATE Assessments SET WEIGHT = WEIGHT / 100.0 WHERE WEIGHT > 1")
+                # 進行每門課程的總和正規化，避免因除法或資料不一致導致總和 != 1
+                cursor.execute("SELECT COURSE_ID, SUM(WEIGHT) as s FROM Assessments GROUP BY COURSE_ID")
+                sums = cursor.fetchall()
+                for row in sums:
+                    course_id = row[0]
+                    s = float(row[1]) if row[1] is not None else 0.0
+                    if s > 0:
+                        # 若總和與 1 相差較大，按比例調整
+                        if abs(s - 1.0) > 1e-9:
+                            factor = 1.0 / s
+                            cursor.execute("UPDATE Assessments SET WEIGHT = WEIGHT * %s WHERE COURSE_ID = %s", (factor, course_id))
+                print('完成百分比轉換與按課程正規化。')
+        except Exception as e:
+            print('在轉換 Assessments 權重時發生錯誤:', e)
+
         conn.commit()
         cursor.close()
         conn.close()
@@ -257,11 +280,8 @@ def get_course_portfolios(course_id):
     try:
         conn = get_mysql_connection()
         cur = conn.cursor()
-        # 回傳前端需要的欄位：PORTFO_ID, STU_ID, AST_ID, TITLE, FILE_URL, UPLOAD_DATE
         cur.execute(
-            "SELECT p.PORTFO_ID, p.STU_ID, p.AST_ID, p.TITLE, p.FILE_URL, p.UPLOAD_DATE "
-            "FROM Portfolios p "
-            "WHERE p.COURSE_ID = %s",
+            "SELECT PORTFO_ID, STU_ID, PORT_NAME, PORT_LINK, UPLOAD_DATE FROM Portfolios WHERE COURSE_ID = %s",
             (course_id,)
         )
         rows = cur.fetchall()
