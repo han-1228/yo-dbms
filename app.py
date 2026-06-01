@@ -404,7 +404,7 @@ def remove_enrollment(course_id, stu_id):
             placeholders = ','.join(['%s'] * len(ast_ids))
             cur.execute(f"DELETE FROM Scores WHERE STU_ID = %s AND AST_ID IN ({placeholders})", tuple([stu_id] + ast_ids))
             scores_deleted = cur.rowcount
-        # 2) 刪除該學生在此課���的作品
+        # 2) 刪除該學生在此課程的作品
         cur.execute("DELETE FROM Portfolios WHERE STU_ID = %s AND COURSE_ID = %s", (stu_id, course_id))
         portfolios_deleted = cur.rowcount
         # 3) 刪除修課紀錄
@@ -671,9 +671,9 @@ def save_course_scores(course_id):
 
 @app.route('/api/upload', methods=['POST'])
 def api_upload():
-    """接受 multipart/form-data 的 CSV 上傳，參數: file, type。
-    type 可能為 students, courses, enrollments, assessments, scores, portfolios
-    將 CSV 解析後使用 INSERT IGNORE 匯入資料庫。
+    """接受 multipart/form-data 的 CSV 上傳，支援 header-aware parsing。
+    對 portfolios 支援多種 CSV 格式（包含短格式：STU_ID,AST_ID,TITLE,FILE_URL,UPLOAD_DATE），
+    若 PORTFO_ID 或 COURSE_ID 缺少可自動補 (PORTFO_ID 會自動產生，COURSE_ID 可由 form 傳入 course_id)。
     """
     try:
         if 'file' not in request.files:
@@ -682,34 +682,98 @@ def api_upload():
         if file.filename == '':
             return jsonify({'error': 'no selected file'}), 400
         ftype = (request.form.get('type') or '').lower()
+        course_id_override = request.form.get('course_id')
         allowed = {'students','courses','enrollments','assessments','scores','portfolios'}
         if ftype not in allowed:
             return jsonify({'error': 'invalid type parameter'}), 400
 
-        # 讀取 CSV 內容（支援 utf-8-sig）
         stream = io.TextIOWrapper(file.stream, encoding='utf-8-sig')
-        reader = csv.reader(stream)
-        next(reader, None)
 
-        # 對應 SQL
-        mapping = {
-            'students': ("Students", "INSERT IGNORE INTO Students (STU_ID, STU_NAME, CLASS_NAME, SEAT_NUM) VALUES (%s, %s, %s, %s)"),
-            'courses': ("Courses", "INSERT IGNORE INTO Courses (COURSE_ID, COURSE_NAME, SEMESTER) VALUES (%s, %s, %s)"),
-            'enrollments': ("Enrollments", "INSERT IGNORE INTO Enrollments (ENROLL_ID, STU_ID, COURSE_ID) VALUES (%s, %s, %s)"),
-            'assessments': ("Assessments", "INSERT IGNORE INTO Assessments (AST_ID, COURSE_ID, AST_NAME, CATEGORY, WEIGHT) VALUES (%s, %s, %s, %s, %s)"),
-            'scores': ("Scores", "INSERT IGNORE INTO Scores (SCORE_ID, STU_ID, AST_ID, SCORE) VALUES (%s, %s, %s, %s)"),
-            'portfolios': ("Portfolios", "INSERT IGNORE INTO Portfolios (PORTFO_ID, STU_ID, COURSE_ID, AST_ID, TITLE, UPLOAD_DATE, FILE_URL) VALUES (%s, %s, %s, %s, %s, %s, %s)")
+        # SQL 與期望欄位對應（順序對應到 INSERT 中的欄位順序）
+        cols_map = {
+            'students': ['STU_ID','STU_NAME','CLASS_NAME','SEAT_NUM'],
+            'courses': ['COURSE_ID','COURSE_NAME','SEMESTER'],
+            'enrollments': ['ENROLL_ID','STU_ID','COURSE_ID'],
+            'assessments': ['AST_ID','COURSE_ID','AST_NAME','CATEGORY','WEIGHT'],
+            'scores': ['SCORE_ID','STU_ID','AST_ID','SCORE'],
+            'portfolios': ['PORTFO_ID','STU_ID','COURSE_ID','AST_ID','TITLE','UPLOAD_DATE','FILE_URL']
+        }
+        sql_map = {
+            'students': "INSERT IGNORE INTO Students (STU_ID, STU_NAME, CLASS_NAME, SEAT_NUM) VALUES (%s, %s, %s, %s)",
+            'courses': "INSERT IGNORE INTO Courses (COURSE_ID, COURSE_NAME, SEMESTER) VALUES (%s, %s, %s)",
+            'enrollments': "INSERT IGNORE INTO Enrollments (ENROLL_ID, STU_ID, COURSE_ID) VALUES (%s, %s, %s)",
+            'assessments': "INSERT IGNORE INTO Assessments (AST_ID, COURSE_ID, AST_NAME, CATEGORY, WEIGHT) VALUES (%s, %s, %s, %s, %s)",
+            'scores': "INSERT IGNORE INTO Scores (SCORE_ID, STU_ID, AST_ID, SCORE) VALUES (%s, %s, %s, %s)",
+            'portfolios': "INSERT IGNORE INTO Portfolios (PORTFO_ID, STU_ID, COURSE_ID, AST_ID, TITLE, UPLOAD_DATE, FILE_URL) VALUES (%s, %s, %s, %s, %s, %s, %s)"
         }
 
-        table_name, sql = mapping[ftype]
-        param_count = sql.count('%s')
+        expected_cols = cols_map[ftype]
+        sql = sql_map[ftype]
         records = []
-        for row in reader:
-            if not any(row):
-                continue
-            processed = (row + [None] * param_count)[:param_count]
-            processed = [None if str(v).strip() == '' else v for v in processed]
-            records.append(tuple(processed))
+
+        # 嘗試以 header-aware 的 DictReader 解析
+        stream.seek(0)
+        try:
+            dict_reader = csv.DictReader(stream)
+            header = dict_reader.fieldnames
+            use_dict = bool(header and any(h and h.strip() for h in header))
+        except Exception:
+            use_dict = False
+
+        if use_dict:
+            # 建立 normalized key map
+            for row in dict_reader:
+                if not any((v and str(v).strip()) for v in row.values()):
+                    continue
+                norm = {k.strip().lower().replace(' ', '').replace('_',''): (v if v is not None else '') for k,v in row.items()}
+
+                def get_val(col_name):
+                    keys = [col_name, col_name.lower(), col_name.lower().replace('_',''), col_name.lower().replace('_','').replace(' ', '')]
+                    for k in keys:
+                        nk = k.strip().lower().replace(' ', '').replace('_','')
+                        if nk in norm and norm[nk] != '':
+                            return norm[nk]
+                    return None
+
+                if ftype == 'portfolios':
+                    vals = []
+                    for col in expected_cols:
+                        v = get_val(col)
+                        if col == 'PORTFO_ID' and not v:
+                            v = f"PF{int(time.time()*1000)}{random.randint(100,999)}"
+                        if col == 'COURSE_ID' and not v and course_id_override:
+                            v = course_id_override
+                        vals.append(v)
+                    records.append(tuple(vals))
+                else:
+                    vals = []
+                    for col in expected_cols:
+                        v = get_val(col)
+                        vals.append(v)
+                    records.append(tuple(vals))
+        else:
+            # fallback: plaintext rows (no header)
+            stream.seek(0)
+            reader = csv.reader(stream)
+            next(reader, None)
+            param_count = sql.count('%s')
+            for row in reader:
+                if not any(row):
+                    continue
+                processed = (row + [None] * param_count)[:param_count]
+                processed = [None if str(v).strip() == '' else v for v in processed]
+                # 若為 portfolios 且 CSV 為短格式 (STU_ID,AST_ID,TITLE,FILE_URL,UPLOAD_DATE)，嘗試偵測
+                if ftype == 'portfolios' and len(processed) == 5:
+                    # 假設格式：STU_ID, AST_ID, TITLE, FILE_URL, UPLOAD_DATE
+                    portfo_id = f"PF{int(time.time()*1000)}{random.randint(100,999)}"
+                    course_id = course_id_override or None
+                    ast_id = processed[1]
+                    title = processed[2]
+                    file_url = processed[3]
+                    upload_date = processed[4]
+                    records.append((portfo_id, processed[0], course_id, ast_id, title, upload_date, file_url))
+                else:
+                    records.append(tuple(processed))
 
         if not records:
             return jsonify({'message': 'no data in csv'}), 200
@@ -721,7 +785,7 @@ def api_upload():
         inserted = cur.rowcount
         cur.close()
         conn.close()
-        return jsonify({'message': f'imported {inserted} rows into {table_name}'}), 200
+        return jsonify({'message': f'imported {inserted} rows into {ftype}'}), 200
     except Exception as e:
         try:
             conn.rollback()

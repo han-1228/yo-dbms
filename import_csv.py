@@ -2,6 +2,8 @@ import os
 import csv
 import mysql.connector
 from dotenv import load_dotenv
+import time
+import random
 
 # 載入環境變數
 load_dotenv()
@@ -16,33 +18,89 @@ def get_aiven_connection():
         ssl_ca='ca.pem'
     )
 
-def import_csv_to_table(cursor, table_name, file_path, sql_query):
+def import_csv_to_table(cursor, table_name, file_path, sql_query, course_id_override=None):
     print(f"正在匯入 {table_name}...")
     if not os.path.exists(file_path):
         print(f"❌ 找不到檔案：{file_path}，跳過此表。")
         return
 
-    # 🌟 升級版魔法：自動計算 SQL 語句中需要幾個欄位 (幾個 %s)
     param_count = sql_query.count('%s')
 
     try:
         with open(file_path, mode='r', encoding='utf-8-sig') as f:
-            reader = csv.reader(f)
-            next(reader)  # 跳過第一行標題
-            
+            # 嘗試 header-aware
+            try:
+                reader = csv.DictReader(f)
+                header = reader.fieldnames
+                use_dict = bool(header and any(h and h.strip() for h in header))
+            except Exception:
+                use_dict = False
+                f.seek(0)
+
             records = []
-            for row in reader:
-                if not any(row): 
-                    continue # 跳過完全空白的行
-                
-                # 🌟 防護網 1：如果 CSV 欄位太多就切掉，太少就用 None 補齊
-                processed_row = (row + [None] * param_count)[:param_count]
-                
-                # 🌟 防護網 2：把 CSV 裡的空字串 '' 轉換成 None (資料庫的 NULL)，防止型態錯誤
-                processed_row = [None if str(val).strip() == '' else val for val in processed_row]
-                
-                records.append(tuple(processed_row))
-            
+            if use_dict:
+                expected = None
+                if table_name.lower() == 'portfolios':
+                    expected = ['PORTFO_ID','STU_ID','COURSE_ID','AST_ID','TITLE','UPLOAD_DATE','FILE_URL']
+                elif table_name.lower() == 'students':
+                    expected = ['STU_ID','STU_NAME','CLASS_NAME','SEAT_NUM']
+                elif table_name.lower() == 'courses':
+                    expected = ['COURSE_ID','COURSE_NAME','SEMESTER']
+                elif table_name.lower() == 'enrollments':
+                    expected = ['ENROLL_ID','STU_ID','COURSE_ID']
+                elif table_name.lower() == 'assessments':
+                    expected = ['AST_ID','COURSE_ID','AST_NAME','CATEGORY','WEIGHT']
+                elif table_name.lower() == 'scores':
+                    expected = ['SCORE_ID','STU_ID','AST_ID','SCORE']
+
+                for row in reader:
+                    if not any((v and str(v).strip()) for v in row.values()):
+                        continue
+                    norm = {k.strip().lower().replace(' ', '').replace('_',''): (v if v is not None else '') for k,v in row.items()}
+                    def get_val(col_name):
+                        keys = [col_name, col_name.lower(), col_name.lower().replace('_',''), col_name.lower().replace('_','').replace(' ', '')]
+                        for k in keys:
+                            nk = k.strip().lower().replace(' ', '').replace('_','')
+                            if nk in norm and norm[nk] != '':
+                                return norm[nk]
+                        return None
+
+                    if table_name.lower() == 'portfolios':
+                        vals = []
+                        for col in expected:
+                            v = get_val(col)
+                            if col == 'PORTFO_ID' and not v:
+                                v = f"PF{int(time.time()*1000)}{random.randint(100,999)}"
+                            if col == 'COURSE_ID' and not v and course_id_override:
+                                v = course_id_override
+                            vals.append(v)
+                        records.append(tuple(vals))
+                    else:
+                        vals = []
+                        for col in expected:
+                            vals.append(get_val(col))
+                        records.append(tuple(vals))
+            else:
+                f.seek(0)
+                reader = csv.reader(f)
+                next(reader, None)
+                for row in reader:
+                    if not any(row):
+                        continue
+                    processed = (row + [None] * param_count)[:param_count]
+                    processed = [None if str(val).strip() == '' else val for val in processed]
+                    if table_name.lower() == 'portfolios' and len(processed) == 5:
+                        # 假設格式：STU_ID, AST_ID, TITLE, FILE_URL, UPLOAD_DATE
+                        portfo_id = f"PF{int(time.time()*1000)}{random.randint(100,999)}"
+                        course_id = course_id_override or None
+                        ast_id = processed[1]
+                        title = processed[2]
+                        file_url = processed[3]
+                        upload_date = processed[4]
+                        records.append((portfo_id, processed[0], course_id, ast_id, title, upload_date, file_url))
+                    else:
+                        records.append(tuple(processed))
+
             if records:
                 cursor.executemany(sql_query, records)
                 print(f"✅ {table_name} 匯入成功！共 {cursor.rowcount} 筆資料。")
