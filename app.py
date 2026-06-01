@@ -164,7 +164,9 @@ def init_db_from_csv_mysql():
         print(f"MySQL 連線或操作失敗: {e}")
 
 # 初始化（建立表格並匯入 CSV）
-init_db_from_csv_mysql()
+# 預設不要在模組載入時自動執行，改以環境變數啟用，避免部署時阻塞或失敗。
+if os.environ.get('INIT_DB', '0') == '1':
+    init_db_from_csv_mysql()
 
 # helper: 將 cursor.fetchall() 與 column_names 轉為 list[dict]
 def rows_to_dicts(cursor, rows):

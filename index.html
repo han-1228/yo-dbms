@@ -329,31 +329,98 @@
     function calculateRowAverage(inputElem) { const tr = inputElem.closest('tr'); const inputs = tr.querySelectorAll('.score-input'); const avgCell = tr.querySelector('.avg-display'); let total = 0; let count = inputs.length; inputs.forEach(inp => { let val = parseFloat(inp.value); if (!isNaN(val)) { total += val; } }); let avg = count > 0 ? (total / count).toFixed(1) : 0; avgCell.innerText = avg; }
     // 取得某課程的評量清單（快取）
     const assessmentCache = {};
+    const assessmentWeightMap = {}; // courseId -> { AST_NAME: weight }
     function fetchAssessmentsForCourse(courseId){
       if(assessmentCache[courseId]) return Promise.resolve(assessmentCache[courseId]);
-      return fetch(`${baseUrl}/course/${courseId}/assessments`).then(r => r.json()).then(list => { assessmentCache[courseId] = list; return list; });
+      return fetch(`${baseUrl}/course/${courseId}/assessments`).then(r => r.json()).then(list => { assessmentCache[courseId] = list;
+        // 建立 weight map
+        const map = {};
+        list.forEach(a => { map[a.AST_NAME] = parseFloat(a.WEIGHT) || 0; });
+        assessmentWeightMap[courseId] = map;
+        return list;
+      });
     }
+
     function calculateRowAverageWeighted(inputElem){
       const tr = inputElem.closest('tr');
       const inputs = tr.querySelectorAll('.score-input');
       const avgCell = tr.querySelector('.avg-display');
-      // 取得該表格的課程 id
       const courseId = currentCourseId;
-      fetchAssessmentsForCourse(courseId).then(assessments => {
-        const weightMap = {};
-        assessments.forEach(a => weightMap[a.AST_NAME] = parseFloat(a.WEIGHT) || 0);
-        let total = 0; let weightSum = 0;
-        inputs.forEach(inp => {
-          const astName = inp.dataset.ast || inp.getAttribute('data-ast');
-          const w = weightMap[astName] || 0;
-          let val = parseFloat(inp.value);
-          if(!isNaN(val)) { total += val * w; weightSum += w; }
-        });
-        const avg = weightSum > 0 ? (total / weightSum).toFixed(1) : 0;
-        avgCell.innerText = avg;
-      }).catch(()=> { // fallback: unweighted
-        const inputs2 = tr.querySelectorAll('.score-input'); let total2 = 0; let cnt=0; inputs2.forEach(inp=>{ let v=parseFloat(inp.value); if(!isNaN(v)){ total2+=v; cnt++; }}); avgCell.innerText = cnt>0?(total2/cnt).toFixed(1):0; });
+      const weightMap = assessmentWeightMap[courseId] || {};
+      let total = 0, weightSum = 0;
+      inputs.forEach(inp => {
+        const astName = inp.dataset.ast || inp.getAttribute('data-ast');
+        const w = weightMap[astName] || 0;
+        const val = parseFloat(inp.value);
+        if(!isNaN(val)) { total += val * w; weightSum += w; }
+      });
+      const avg = weightSum > 0 ? (total / weightSum).toFixed(1) : 0;
+      avgCell.innerText = avg;
     }
+
+    function fetchCourseData(courseId, type) {
+      const tbody = document.getElementById(`${type}-tbody`);
+      tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">資料載入中...</td></tr>`;
+      if (type !== 'scores') {
+        return fetch(`${baseUrl}/course/${courseId}/${type}`).then(res => res.json()).then(data => {
+          tbody.innerHTML = '';
+          if(data.length === 0) { tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">目前沒有資料</td></tr>`; return; }
+          data.forEach(item => {
+            if (type === 'roster') {
+              tbody.innerHTML += `<tr data-stu="${item.STU_ID}"><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td><td><button class="action-btn" onclick="fetchDeleteStudent('${item.STU_ID}')">刪除</button></td></tr>`;
+            } else if (type === 'portfolios') {
+              tbody.innerHTML += `<tr data-port="${item.PORTFO_ID}"><td style="font-weight:700;">${item.STU_ID}</td><td>${item.AST_ID}</td><td style="font-weight:700;">${item.TITLE || item.PORT_NAME || ''}</td><td><a href="${item.FILE_URL || item.PORT_LINK || '#'}" class="link-style" target="_blank">View File</a></td><td>${item.UPLOAD_DATE}</td><td><button class="action-btn" onclick="fetchDeletePortfolio('${courseId}', '${item.PORTFO_ID}', this)">刪除</button></td></tr>`;
+            }
+          });
+        }).catch(() => tbody.innerHTML = '<tr><td style="color:#c48a7e; text-align: center; padding: 20px;">資料讀取失敗，請確認後端已更新</td></tr>');
+      }
+
+      // 對 scores：並行取得 assessments 與 scores，然後一次性渲染
+      Promise.all([fetchAssessmentsForCourse(courseId), fetch(`${baseUrl}/course/${courseId}/scores`).then(r => r.json())])
+        .then(([assessments, data]) => {
+          tbody.innerHTML = '';
+          if (!Array.isArray(data) || data.length === 0) {
+            tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">目前沒有資料</td></tr>`;
+            return;
+          }
+          const assessmentItems = assessments.map(a => a.AST_NAME);
+          const thead = document.getElementById('scores-thead');
+          let headerHtml = `<tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th>`;
+          assessments.forEach(a => { const pct = (parseFloat(a.WEIGHT) || 0) * 100; headerHtml += `<th><button class="action-btn" style="padding:6px 10px; border-radius:8px; font-weight:700; font-size:12px;" onclick="promptEditWeight('${a.AST_ID}','${courseId}')">${a.AST_NAME}<div style=\\"font-size:11px; font-weight:400; color:var(--text-muted)\\">${pct.toFixed(0)}%</div></button></th>`; });
+          headerHtml += `<th style="color: var(--primary);">總平均 AVG</th></tr>`;
+          thead.innerHTML = headerHtml;
+
+          // 建立學生矩陣
+          const studentMatrix = {};
+          data.forEach(row => {
+            if (!studentMatrix[row.STU_ID]) studentMatrix[row.STU_ID] = { id: row.STU_ID, name: row.STU_NAME, className: row.CLASS_NAME, seatNum: row.SEAT_NUM, grades: {} };
+            studentMatrix[row.STU_ID].grades[row.AST_NAME] = row.SCORE;
+          });
+
+          // 一次性組裝 tbody HTML
+          let tbodyHtml = '';
+          const weightMap = assessmentWeightMap[courseId] || {}; // may be populated by fetchAssessmentsForCourse
+          Object.values(studentMatrix).forEach(student => {
+            let rowHtml = `<tr><td style="font-weight:700;">${student.id}</td><td>${student.className}</td><td>${student.seatNum}</td><td style="font-weight:700;">${student.name}</td>`;
+            assessmentItems.forEach(item => {
+              const scoreValue = student.grades[item] !== undefined ? student.grades[item] : '';
+              rowHtml += `<td><input type="number" class="score-input" data-ast="${item}" value="${scoreValue}" oninput="calculateRowAverageWeighted(this)"></td>`;
+            });
+            // 計算初始加權平均
+            let total = 0, wsum = 0;
+            assessmentItems.forEach(item => { const sv = student.grades[item]; const w = weightMap[item] || 0; if (sv !== undefined && sv !== null && sv !== '') { total += parseFloat(sv) * w; wsum += w; } });
+            const avgDisplay = wsum > 0 ? (total / wsum).toFixed(1) : 0;
+            rowHtml += `<td class="avg-display">${avgDisplay}</td>`;
+            rowHtml += `</tr>`;
+            tbodyHtml += rowHtml;
+          });
+          tbody.innerHTML = tbodyHtml;
+        }).catch(() => {
+          const thead = document.getElementById('scores-thead'); thead.innerHTML = '<tr><th>學號 ID</th><th>班級</th><th>座號</th><th>姓名</th><th style="color:var(--primary)">總平均 AVG</th></tr>';
+          tbody.innerHTML = '<tr><td style="color:#c48a7e; text-align: center; padding: 20px;">讀取評量或成績資料失敗，請確認後端</td></tr>';
+        });
+    }
+    // ...existing code...
     function updateFileNameDisplay(inputElem) { const card = inputElem.closest('.upload-card'); const nameText = card.querySelector('.file-name-text'); if(inputElem.files.length > 0) { nameText.innerText = `📄 ${inputElem.files[0].name}`; nameText.style.color = "#166534"; } else { nameText.innerText = "尚未選取檔案"; nameText.style.color = "var(--primary)"; } }
     async function simulateUpload(btnElem) {
       const card = btnElem.closest('.upload-card');
@@ -508,29 +575,68 @@
       });
     }
 
-    function fetchCourseData(courseId, type) { const tbody = document.getElementById(`${type}-tbody`); tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">資料載入中...</td></tr>`; fetch(`${baseUrl}/course/${courseId}/${type}`).then(res => res.json()).then(data => { tbody.innerHTML = ''; if(data.length === 0) { tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">目前沒有資料</td></tr>`; return; } if (type === 'scores') {
-        const thead = document.getElementById('scores-thead'); thead.innerHTML = '';
-        // 先取得本課程的 assessments（含權重），用既定順序建立欄位標題，並顯示權重百分比
-        fetchAssessmentsForCourse(courseId).then(assessments => {
-          const assessmentItems = assessments.map(a => a.AST_NAME);
-          let headerHtml = `<tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th>`;
-          assessments.forEach(a => {
-            const pct = (parseFloat(a.WEIGHT) || 0) * 100;
-            headerHtml += `<th><button class="action-btn" style="padding:6px 10px; border-radius:8px; font-weight:700; font-size:12px;" onclick="promptEditWeight('${a.AST_ID}','${courseId}')">${a.AST_NAME}<div style=\\"font-size:11px; font-weight:400; color:var(--text-muted)\\">${pct.toFixed(0)}%</div></button></th>`;
+    function fetchCourseData(courseId, type) {
+      const tbody = document.getElementById(`${type}-tbody`);
+      tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">資料載入中...</td></tr>`;
+      if (type !== 'scores') {
+        return fetch(`${baseUrl}/course/${courseId}/${type}`).then(res => res.json()).then(data => {
+          tbody.innerHTML = '';
+          if(data.length === 0) { tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">目前沒有資料</td></tr>`; return; }
+          data.forEach(item => {
+            if (type === 'roster') {
+              tbody.innerHTML += `<tr data-stu="${item.STU_ID}"><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td><td><button class="action-btn" onclick="fetchDeleteStudent('${item.STU_ID}')">刪除</button></td></tr>`;
+            } else if (type === 'portfolios') {
+              tbody.innerHTML += `<tr data-port="${item.PORTFO_ID}"><td style="font-weight:700;">${item.STU_ID}</td><td>${item.AST_ID}</td><td style="font-weight:700;">${item.TITLE || item.PORT_NAME || ''}</td><td><a href="${item.FILE_URL || item.PORT_LINK || '#'}" class="link-style" target="_blank">View File</a></td><td>${item.UPLOAD_DATE}</td><td><button class="action-btn" onclick="fetchDeletePortfolio('${courseId}', '${item.PORTFO_ID}', this)">刪除</button></td></tr>`;
+            }
           });
+        }).catch(() => tbody.innerHTML = '<tr><td style="color:#c48a7e; text-align: center; padding: 20px;">資料讀取失敗，請確認後端已更新</td></tr>');
+      }
+
+      // 對 scores：並行取得 assessments 與 scores，然後一次性渲染
+      Promise.all([fetchAssessmentsForCourse(courseId), fetch(`${baseUrl}/course/${courseId}/scores`).then(r => r.json())])
+        .then(([assessments, data]) => {
+          tbody.innerHTML = '';
+          if (!Array.isArray(data) || data.length === 0) {
+            tbody.innerHTML = `<tr><td style="text-align: center; color: #a0a0a0; padding: 20px;">目前沒有資料</td></tr>`;
+            return;
+          }
+          const assessmentItems = assessments.map(a => a.AST_NAME);
+          const thead = document.getElementById('scores-thead');
+          let headerHtml = `<tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th>`;
+          assessments.forEach(a => { const pct = (parseFloat(a.WEIGHT) || 0) * 100; headerHtml += `<th><button class="action-btn" style="padding:6px 10px; border-radius:8px; font-weight:700; font-size:12px;" onclick="promptEditWeight('${a.AST_ID}','${courseId}')">${a.AST_NAME}<div style=\\"font-size:11px; font-weight:400; color:var(--text-muted)\\">${pct.toFixed(0)}%</div></button></th>`; });
           headerHtml += `<th style="color: var(--primary);">總平均 AVG</th></tr>`;
           thead.innerHTML = headerHtml;
 
-          // 建立學生成績矩陣並顯示（保留原先邏輯）
-          let studentMatrix = {};
-          data.forEach(row => { if (!studentMatrix[row.STU_ID]) { studentMatrix[row.STU_ID] = { id: row.STU_ID, name: row.STU_NAME, className: row.CLASS_NAME, seatNum: row.SEAT_NUM, grades: {} }; } studentMatrix[row.STU_ID].grades[row.AST_NAME] = row.SCORE; });
-          Object.values(studentMatrix).forEach(student => { let rowHtml = `<tr><td style="font-weight:700;">${student.id}</td><td>${student.className}</td><td>${student.seatNum}</td><td style="font-weight:700;">${student.name}</td>`; let totalScore = 0; let assessCount = assessmentItems.length; assessmentItems.forEach(item => { let scoreValue = student.grades[item] !== undefined ? student.grades[item] : ''; if(scoreValue !== '') totalScore += parseFloat(scoreValue); rowHtml += `<td><input type="number" class="score-input" data-ast="${item}" value="${scoreValue}" oninput="calculateRowAverageWeighted(this)"></td>`; }); // 初始平均改為加權計算
-            rowHtml += `<td class="avg-display">0</td>`; rowHtml += `</tr>`; tbody.innerHTML += rowHtml; });
-          // 觸發一次計算讓顯示的 AVG 正確
-          document.querySelectorAll('#scores-tbody tr').forEach(tr => { const inp = tr.querySelector('.score-input'); if(inp) calculateRowAverageWeighted(inp); });
-        }).catch(() => { thead.innerHTML = '<tr><th>學號 ID</th><th>班級</th><th>座號</th><th>姓名</th><th style="color:var(--primary)">總平均 AVG</th></tr>'; tbody.innerHTML = '<tr><td style="color:#c48a7e; text-align: center; padding: 20px;">讀取評量資料失敗，請確認後端</td></tr>'; });
-      } else { data.forEach(item => { if (type === 'roster') { tbody.innerHTML += `<tr data-stu="${item.STU_ID}"><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td><td><button class="action-btn" onclick="fetchDeleteStudent('${item.STU_ID}')">刪除</button></td></tr>`; } else if (type === 'portfolios') { tbody.innerHTML += `<tr data-port="${item.PORTFO_ID}"><td style="font-weight:700;">${item.STU_ID}</td><td>${item.AST_ID}</td><td style="font-weight:700;">${item.TITLE || item.PORT_NAME || ''}</td><td><a href="${item.FILE_URL || item.PORT_LINK || '#'}" class="link-style" target="_blank">View File</a></td><td>${item.UPLOAD_DATE}</td><td><button class="action-btn" onclick="fetchDeletePortfolio('${courseId}', '${item.PORTFO_ID}', this)">刪除</button></td></tr>`; } }); }
-    }).catch(() => tbody.innerHTML = '<tr><td style="color:#c48a7e; text-align: center; padding: 20px;">資料讀取失敗，請確認後端已更新</td></tr>'); }
+          // 建立學生矩陣
+          const studentMatrix = {};
+          data.forEach(row => {
+            if (!studentMatrix[row.STU_ID]) studentMatrix[row.STU_ID] = { id: row.STU_ID, name: row.STU_NAME, className: row.CLASS_NAME, seatNum: row.SEAT_NUM, grades: {} };
+            studentMatrix[row.STU_ID].grades[row.AST_NAME] = row.SCORE;
+          });
+
+          // 一次性組裝 tbody HTML
+          let tbodyHtml = '';
+          const weightMap = assessmentWeightMap[courseId] || {}; // may be populated by fetchAssessmentsForCourse
+          Object.values(studentMatrix).forEach(student => {
+            let rowHtml = `<tr><td style="font-weight:700;">${student.id}</td><td>${student.className}</td><td>${student.seatNum}</td><td style="font-weight:700;">${student.name}</td>`;
+            assessmentItems.forEach(item => {
+              const scoreValue = student.grades[item] !== undefined ? student.grades[item] : '';
+              rowHtml += `<td><input type="number" class="score-input" data-ast="${item}" value="${scoreValue}" oninput="calculateRowAverageWeighted(this)"></td>`;
+            });
+            // 計算初始加權平均
+            let total = 0, wsum = 0;
+            assessmentItems.forEach(item => { const sv = student.grades[item]; const w = weightMap[item] || 0; if (sv !== undefined && sv !== null && sv !== '') { total += parseFloat(sv) * w; wsum += w; } });
+            const avgDisplay = wsum > 0 ? (total / wsum).toFixed(1) : 0;
+            rowHtml += `<td class="avg-display">${avgDisplay}</td>`;
+            rowHtml += `</tr>`;
+            tbodyHtml += rowHtml;
+          });
+          tbody.innerHTML = tbodyHtml;
+        }).catch(() => {
+          const thead = document.getElementById('scores-thead'); thead.innerHTML = '<tr><th>學號 ID</th><th>班級</th><th>座號</th><th>姓名</th><th style="color:var(--primary)">總平均 AVG</th></tr>';
+          tbody.innerHTML = '<tr><td style="color:#c48a7e; text-align: center; padding: 20px;">讀取評量或成績資料失敗，請確認後端</td></tr>';
+        });
+    }
 
     // 新增：可點擊編輯權重的函式
     function promptEditWeight(astId, courseId){
