@@ -257,12 +257,12 @@ def get_course_roster(course_id):
 
 @app.route('/api/course/<course_id>/portfolios', methods=['GET'])
 def get_course_portfolios(course_id):
-    """取得某課程的所有作品，包含學生班級、座號、姓名、作品標題、連結、上傳日期。"""
+    """取得某課程的所有作品，包含學號、評量ID、班級、座號、姓名、作品標題、連結、上傳日期。"""
     try:
         conn = get_mysql_connection()
         cur = conn.cursor()
         query = """
-            SELECT s.CLASS_NAME, s.SEAT_NUM, s.STU_NAME, 
+            SELECT p.STU_ID, p.AST_ID, s.CLASS_NAME, s.SEAT_NUM, s.STU_NAME, 
                    p.TITLE, p.FILE_URL, p.UPLOAD_DATE 
             FROM Portfolios p 
             JOIN Students s ON p.STU_ID = s.STU_ID 
@@ -404,7 +404,7 @@ def remove_enrollment(course_id, stu_id):
             placeholders = ','.join(['%s'] * len(ast_ids))
             cur.execute(f"DELETE FROM Scores WHERE STU_ID = %s AND AST_ID IN ({placeholders})", tuple([stu_id] + ast_ids))
             scores_deleted = cur.rowcount
-        # 2) 刪除該學生在此課程的作品
+        # 2) 刪除該學生在此課���的作品
         cur.execute("DELETE FROM Portfolios WHERE STU_ID = %s AND COURSE_ID = %s", (stu_id, course_id))
         portfolios_deleted = cur.rowcount
         # 3) 刪除修課紀錄
