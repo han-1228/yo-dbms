@@ -456,5 +456,33 @@ def search_courses():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/students/search', methods=['GET'])
+def search_students():
+    """後端搜尋學生：接受 query params 'field' 與 'q'，在指定欄位做 SQL LIKE 搜尋。
+    field 可為 STU_ID, STU_NAME。
+    若 q 為空則回傳全部學生。
+    """
+    try:
+        field = request.args.get('field', 'STU_ID')
+        q = request.args.get('q', '') or ''
+        allowed = {'STU_ID', 'STU_NAME'}
+        if field not in allowed:
+            return jsonify({'error': 'invalid field parameter'}), 400
+
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        if q.strip() == '':
+            cur.execute("SELECT STU_ID, STU_NAME, CLASS_NAME, SEAT_NUM FROM Students")
+        else:
+            sql = f"SELECT STU_ID, STU_NAME, CLASS_NAME, SEAT_NUM FROM Students WHERE {field} LIKE %s"
+            cur.execute(sql, (f"%{q}%",))
+        rows = cur.fetchall()
+        data = rows_to_dicts(cur, rows)
+        cur.close()
+        conn.close()
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
