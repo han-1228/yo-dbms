@@ -740,86 +740,75 @@ def api_upload():
 
         expected_cols = cols_map[ftype]
         sql = sql_map[ftype]
-        records = []
 
-        # 嘗試以 header-aware 的 DictReader 解析
-        stream.seek(0)
-        try:
-            dict_reader = csv.DictReader(stream)
-            header = dict_reader.fieldnames
-            use_dict = bool(header and any(h and h.strip() for h in header))
-        except Exception:
-            use_dict = False
-
-        if use_dict:
-            # 建立 normalized key map
-            for row in dict_reader:
-                if not any((v and str(v).strip()) for v in row.values()):
-                    continue
-                norm = {k.strip().lower().replace(' ', '').replace('_',''): (v if v is not None else '') for k,v in row.items()}
-
-                def get_val(col_name):
-                    keys = [col_name, col_name.lower(), col_name.lower().replace('_',''), col_name.lower().replace('_','').replace(' ', '')]
-                    for k in keys:
-                        nk = k.strip().lower().replace(' ', '').replace('_','')
-                        if nk in norm and norm[nk] != '':
-                            return norm[nk]
-                    return None
-
-                if ftype == 'portfolios':
-                    vals = []
-                    for col in expected_cols:
-                        v = get_val(col)
-                        if col == 'PORTFO_ID' and not v:
-                            v = f"PF{int(time.time()*1000)}{random.randint(100,999)}"
-                        if col == 'COURSE_ID' and not v and course_id_override:
-                            v = course_id_override
-                        vals.append(v)
-                    # 轉換 FILE_URL
-                    if vals and len(vals) >= 7:
-                        vals[6] = convert_google_link(vals[6])
-                    records.append(tuple(vals))
-                else:
-                    vals = []
-                    for col in expected_cols:
-                        v = get_val(col)
-                        vals.append(v)
-                    records.append(tuple(vals))
-        else:
-            # fallback: plaintext rows (no header)
+        # 使用 generator 逐列解析 CSV，避免一次把所有資料讀入記憶體
+        def records_generator():
             stream.seek(0)
-            reader = csv.reader(stream)
-            next(reader, None)
-            param_count = sql.count('%s')
-            for row in reader:
-                if not any(row):
-                    continue
-                processed = (row + [None] * param_count)[:param_count]
-                processed = [None if str(v).strip() == '' else v for v in processed]
-                # 若為 portfolios 且 CSV 為短格式 (STU_ID,AST_ID,TITLE,FILE_URL,UPLOAD_DATE)，嘗試偵測
-                if ftype == 'portfolios' and len(processed) == 5:
-                    # 假設格式：STU_ID, AST_ID, TITLE, FILE_URL, UPLOAD_DATE
-                    portfo_id = f"PF{int(time.time()*1000)}{random.randint(100,999)}"
-                    course_id = course_id_override or None
-                    ast_id = processed[1]
-                    title = processed[2]
-                    file_url = convert_google_link(processed[3])
-                    upload_date = processed[4]
-                    records.append((portfo_id, processed[0], course_id, ast_id, title, upload_date, file_url))
-                else:
-                    # 若是完整 portfolios 7 欄，轉換最後一欄
-                    if ftype == 'portfolios' and len(processed) >= 7:
-                        processed[6] = convert_google_link(processed[6])
-                    records.append(tuple(processed))
+            try:
+                dict_reader = csv.DictReader(stream)
+                header = dict_reader.fieldnames
+                use_dict = bool(header and any(h and h.strip() for h in header))
+            except Exception:
+                use_dict = False
 
-        if not records:
-            return jsonify({'message': 'no data in csv'}), 200
+            if use_dict:
+                for row in dict_reader:
+                    if not any((v and str(v).strip()) for v in row.values()):
+                        continue
+                    norm = {k.strip().lower().replace(' ', '').replace('_',''): (v if v is not None else '') for k,v in row.items()}
+                    def get_val(col_name):
+                        keys = [col_name, col_name.lower(), col_name.lower().replace('_',''), col_name.lower().replace('_','').replace(' ', '')]
+                        for k in keys:
+                            nk = k.strip().lower().replace(' ', '').replace('_','')
+                            if nk in norm and norm[nk] != '':
+                                return norm[nk]
+                        return None
 
+                    if ftype == 'portfolios':
+                        vals = []
+                        for col in expected_cols:
+                            v = get_val(col)
+                            if col == 'PORTFO_ID' and not v:
+                                v = f"PF{int(time.time()*1000)}{random.randint(100,999)}"
+                            if col == 'COURSE_ID' and not v and course_id_override:
+                                v = course_id_override
+                            vals.append(v)
+                        # convert link
+                        if len(vals) >= 7:
+                            vals[6] = convert_google_link(vals[6])
+                        yield tuple(vals)
+                    else:
+                        vals = []
+                        for col in expected_cols:
+                            vals.append(get_val(col))
+                        yield tuple(vals)
+            else:
+                stream.seek(0)
+                reader = csv.reader(stream)
+                next(reader, None)
+                param_count = sql.count('%s')
+                for row in reader:
+                    if not any(row):
+                        continue
+                    processed = (row + [None] * param_count)[:param_count]
+                    processed = [None if str(v).strip() == '' else v for v in processed]
+                    if ftype == 'portfolios' and len(processed) == 5:
+                        portfo_id = f"PF{int(time.time()*1000)}{random.randint(100,999)}"
+                        course_id = course_id_override or None
+                        ast_id = processed[1]
+                        title = processed[2]
+                        file_url = convert_google_link(processed[3])
+                        upload_date = processed[4]
+                        yield (portfo_id, processed[0], course_id, ast_id, title, upload_date, file_url)
+                    else:
+                        if ftype == 'portfolios' and len(processed) >= 7:
+                            processed[6] = convert_google_link(processed[6])
+                        yield tuple(processed)
+
+        # 實際分批寫入資料庫
         conn = get_mysql_connection()
         cur = conn.cursor()
-        cur.executemany(sql, records)
-        conn.commit()
-        inserted = cur.rowcount
+        inserted = executemany_in_chunks(conn, cur, sql, records_generator(), chunk_size=500)
         cur.close()
         conn.close()
         return jsonify({'message': f'imported {inserted} rows into {ftype}'}), 200
@@ -829,4 +818,19 @@ def api_upload():
         except:
             pass
         return jsonify({'error': str(e)}), 500
-# ...existing code...
+
+def executemany_in_chunks(conn, cur, sql, records_iter, chunk_size=500):
+    total = 0
+    chunk = []
+    for rec in records_iter:
+        chunk.append(rec)
+        if len(chunk) >= chunk_size:
+            cur.executemany(sql, chunk)
+            conn.commit()
+            total += cur.rowcount
+            chunk = []
+    if chunk:
+        cur.executemany(sql, chunk)
+        conn.commit()
+        total += cur.rowcount
+    return total
