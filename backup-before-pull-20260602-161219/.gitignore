@@ -1,0 +1,17 @@
+# 忽略環境變數檔案 (保護密碼)
+.env
+
+# 忽略 Aiven 安全憑證
+ca.pem
+
+# 忽略虛擬環境資料夾 (檔案太大，不要推上 Git)
+venv/
+
+# 忽略 Mac 系統隱藏檔
+.DS_Store
+
+# 忽略 Excel 原檔與暫存檔
+*.xlsx
+~$*.xlsx
+
+data.env
