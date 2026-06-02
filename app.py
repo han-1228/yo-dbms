@@ -131,7 +131,7 @@ def init_db_from_csv_mysql():
                 AST_ID VARCHAR(50),
                 TITLE VARCHAR(255),
                 UPLOAD_DATE VARCHAR(50),
-                FILE_URL VARCHAR(255),
+                FILE_URL TEXT,
                 FOREIGN KEY (STU_ID) REFERENCES Students(STU_ID),
                 FOREIGN KEY (COURSE_ID) REFERENCES Courses(COURSE_ID),
                 FOREIGN KEY (AST_ID) REFERENCES Assessments(AST_ID)

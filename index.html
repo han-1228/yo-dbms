@@ -526,7 +526,7 @@
             data.forEach(item => { 
               if (type === 'roster') { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td></tr>`; } 
               else if (type === 'portfolios') { 
-                tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.AST_ID}</td><td style="font-weight:700;">${item.TITLE}</td><td><a href="${item.FILE_URL}" class="link-style" target="_blank">View File</a></td><td>${item.UPLOAD_DATE}</td></tr>`; 
+                tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.AST_ID}</td><td style="font-weight:700;">${item.TITLE}</td><td>${item.FILE_LINK || '<span style="color:gray">無連結</span>'}</td><td>${item.UPLOAD_DATE}</td></tr>`;
               } 
             }); 
           } 
