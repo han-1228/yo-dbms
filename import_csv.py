@@ -2,6 +2,9 @@ import os
 import csv
 import mysql.connector
 from dotenv import load_dotenv
+import time
+import random
+import re
 
 # 載入環境變數
 load_dotenv()
@@ -16,33 +19,124 @@ def get_aiven_connection():
         ssl_ca='ca.pem'
     )
 
-def import_csv_to_table(cursor, table_name, file_path, sql_query):
+def convert_google_link(url):
+    if not url:
+        return url
+    u = str(url).strip()
+    # 移除周圍引號
+    if (u.startswith('"') and u.endswith('"')) or (u.startswith("'") and u.endswith("'")):
+        u = u[1:-1]
+    # 先處理 drive open?id= 格式
+    m = re.search(r'[?&]id=([a-zA-Z0-9_-]+)', u)
+    if m:
+        file_id = m.group(1)
+        return f'https://drive.google.com/uc?export=download&id={file_id}'
+    # 處理 /d/<id>/ 型式
+    m2 = re.search(r'/d/([a-zA-Z0-9_-]+)', u)
+    if m2:
+        file_id = m2.group(1)
+        if 'presentation' in u or 'slides' in u:
+            return f'https://docs.google.com/presentation/d/{file_id}/preview'
+        if 'document' in u:
+            return f'https://docs.google.com/document/d/{file_id}/preview'
+        if 'spreadsheets' in u or 'sheet' in u:
+            return f'https://docs.google.com/spreadsheets/d/{file_id}/preview'
+        # generic drive file
+        return f'https://drive.google.com/uc?export=download&id={file_id}'
+    # 若包含 /edit, 替換為 /preview 並去掉 query
+    if 'docs.google.com' in u and '/edit' in u:
+        return u.split('/edit')[0] + '/preview'
+    return url
+
+def import_csv_to_table(cursor, table_name, file_path, sql_query, course_id_override=None):
     print(f"正在匯入 {table_name}...")
     if not os.path.exists(file_path):
         print(f"❌ 找不到檔案：{file_path}，跳過此表。")
         return
 
-    # 🌟 升級版魔法：自動計算 SQL 語句中需要幾個欄位 (幾個 %s)
     param_count = sql_query.count('%s')
 
     try:
         with open(file_path, mode='r', encoding='utf-8-sig') as f:
-            reader = csv.reader(f)
-            next(reader)  # 跳過第一行標題
-            
+            # 嘗試 header-aware
+            try:
+                reader = csv.DictReader(f)
+                header = reader.fieldnames
+                use_dict = bool(header and any(h and h.strip() for h in header))
+            except Exception:
+                use_dict = False
+                f.seek(0)
+
             records = []
-            for row in reader:
-                if not any(row): 
-                    continue # 跳過完全空白的行
-                
-                # 🌟 防護網 1：如果 CSV 欄位太多就切掉，太少就用 None 補齊
-                processed_row = (row + [None] * param_count)[:param_count]
-                
-                # 🌟 防護網 2：把 CSV 裡的空字串 '' 轉換成 None (資料庫的 NULL)，防止型態錯誤
-                processed_row = [None if str(val).strip() == '' else val for val in processed_row]
-                
-                records.append(tuple(processed_row))
-            
+            if use_dict:
+                expected = None
+                if table_name.lower() == 'portfolios':
+                    expected = ['PORTFO_ID','STU_ID','COURSE_ID','AST_ID','TITLE','UPLOAD_DATE','FILE_URL']
+                elif table_name.lower() == 'students':
+                    expected = ['STU_ID','STU_NAME','CLASS_NAME','SEAT_NUM']
+                elif table_name.lower() == 'courses':
+                    expected = ['COURSE_ID','COURSE_NAME','SEMESTER']
+                elif table_name.lower() == 'enrollments':
+                    expected = ['ENROLL_ID','STU_ID','COURSE_ID']
+                elif table_name.lower() == 'assessments':
+                    expected = ['AST_ID','COURSE_ID','AST_NAME','CATEGORY','WEIGHT']
+                elif table_name.lower() == 'scores':
+                    expected = ['SCORE_ID','STU_ID','AST_ID','SCORE']
+
+                for row in reader:
+                    if not any((v and str(v).strip()) for v in row.values()):
+                        continue
+                    norm = {k.strip().lower().replace(' ', '').replace('_',''): (v if v is not None else '') for k,v in row.items()}
+                    def get_val(col_name):
+                        keys = [col_name, col_name.lower(), col_name.lower().replace('_',''), col_name.lower().replace('_','').replace(' ', '')]
+                        for k in keys:
+                            nk = k.strip().lower().replace(' ', '').replace('_','')
+                            if nk in norm and norm[nk] != '':
+                                return norm[nk]
+                        return None
+
+                    if table_name.lower() == 'portfolios':
+                        vals = []
+                        for col in expected:
+                            v = get_val(col)
+                            if col == 'PORTFO_ID' and not v:
+                                v = f"PF{int(time.time()*1000)}{random.randint(100,999)}"
+                            if col == 'COURSE_ID' and not v and course_id_override:
+                                v = course_id_override
+                            vals.append(v)
+                        # 轉換 FILE_URL
+                        if len(vals) >= 7:
+                            vals[6] = convert_google_link(vals[6])
+                        records.append(tuple(vals))
+                    else:
+                        vals = []
+                        for col in expected:
+                            vals.append(get_val(col))
+                        records.append(tuple(vals))
+            else:
+                f.seek(0)
+                reader = csv.reader(f)
+                next(reader, None)
+                for row in reader:
+                    if not any(row):
+                        continue
+                    processed = (row + [None] * param_count)[:param_count]
+                    processed = [None if str(val).strip() == '' else val for val in processed]
+                    if table_name.lower() == 'portfolios' and len(processed) == 5:
+                        # 假設格式：STU_ID, AST_ID, TITLE, FILE_URL, UPLOAD_DATE
+                        portfo_id = f"PF{int(time.time()*1000)}{random.randint(100,999)}"
+                        course_id = course_id_override or None
+                        ast_id = processed[1]
+                        title = processed[2]
+                        file_url = convert_google_link(processed[3])
+                        upload_date = processed[4]
+                        records.append((portfo_id, processed[0], course_id, ast_id, title, upload_date, file_url))
+                    else:
+                        # 若是完整 portfolios 7 欄，轉換最後一欄
+                        if table_name.lower() == 'portfolios' and len(processed) >= 7:
+                            processed[6] = convert_google_link(processed[6])
+                        records.append(tuple(processed))
+
             if records:
                 cursor.executemany(sql_query, records)
                 print(f"✅ {table_name} 匯入成功！共 {cursor.rowcount} 筆資料。")
@@ -98,6 +192,26 @@ def main():
             cursor, "Portfolios", "6.portfolios.csv",
             "INSERT IGNORE INTO Portfolios (PORTFO_ID, STU_ID, COURSE_ID, AST_ID, TITLE, UPLOAD_DATE, FILE_URL) VALUES (%s, %s, %s, %s, %s, %s, %s)"
         )
+
+        # 若 Assessments 的 WEIGHT 被當成百分比儲存（>1），轉換為小數並按課程正規化
+        try:
+            cursor.execute("SELECT COUNT(*) FROM Assessments WHERE WEIGHT > 1")
+            cnt_row = cursor.fetchone()
+            cnt = cnt_row[0] if cnt_row else 0
+            if cnt and cnt > 0:
+                print(f"發現 {cnt} 筆 Assessments.WEIGHT > 1，將視為百分比並除以 100 轉為小數...")
+                cursor.execute("UPDATE Assessments SET WEIGHT = WEIGHT / 100.0 WHERE WEIGHT > 1")
+                cursor.execute("SELECT COURSE_ID, SUM(WEIGHT) FROM Assessments GROUP BY COURSE_ID")
+                sums = cursor.fetchall()
+                for row in sums:
+                    course_id = row[0]
+                    s = float(row[1]) if row[1] is not None else 0.0
+                    if s > 0 and abs(s - 1.0) > 1e-9:
+                        factor = 1.0 / s
+                        cursor.execute("UPDATE Assessments SET WEIGHT = WEIGHT * %s WHERE COURSE_ID = %s", (factor, course_id))
+                print('完成百分比轉換與按課程正規化。')
+        except Exception as e:
+            print('在轉換 Assessments 權重時發生錯誤:', e)
 
         # 提交所有變更
         conn.commit()

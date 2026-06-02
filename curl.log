@@ -1,0 +1,61 @@
+* Host yo-dbms.onrender.com:443 was resolved.
+* IPv6: (none)
+* IPv4: 216.24.57.251, 216.24.57.7
+*   Trying 216.24.57.251:443...
+* ALPN: curl offers h2,http/1.1
+* TLSv1.3 (OUT), TLS handshake, Client hello (1):
+*  CAfile: /opt/anaconda3/ssl/cacert.pem
+*  CApath: none
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+* TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):
+* TLSv1.3 (IN), TLS handshake, Certificate (11):
+* TLSv1.3 (IN), TLS handshake, CERT verify (15):
+* TLSv1.3 (IN), TLS handshake, Finished (20):
+* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+* TLSv1.3 (OUT), TLS handshake, Finished (20):
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384 / X25519 / id-ecPublicKey
+* ALPN: server accepted h2
+* Server certificate:
+*  subject: CN=onrender.com
+*  start date: May 26 21:02:15 2026 GMT
+*  expire date: Aug 24 22:01:50 2026 GMT
+*  subjectAltName: host "yo-dbms.onrender.com" matched cert's "*.onrender.com"
+*  issuer: C=US; O=Google Trust Services; CN=WE1
+*  SSL certificate verify ok.
+*   Certificate level 0: Public key type EC/prime256v1 (256/128 Bits/secBits), signed using ecdsa-with-SHA256
+*   Certificate level 1: Public key type EC/prime256v1 (256/128 Bits/secBits), signed using ecdsa-with-SHA384
+*   Certificate level 2: Public key type EC/secp384r1 (384/192 Bits/secBits), signed using ecdsa-with-SHA384
+* Connected to yo-dbms.onrender.com (216.24.57.251) port 443
+* using HTTP/2
+* [HTTP/2] [1] OPENED stream for https://yo-dbms.onrender.com/api/upload?debug=1
+* [HTTP/2] [1] [:method: POST]
+* [HTTP/2] [1] [:scheme: https]
+* [HTTP/2] [1] [:authority: yo-dbms.onrender.com]
+* [HTTP/2] [1] [:path: /api/upload?debug=1]
+* [HTTP/2] [1] [user-agent: curl/8.12.1]
+* [HTTP/2] [1] [accept: */*]
+* [HTTP/2] [1] [content-length: 1366]
+* [HTTP/2] [1] [content-type: multipart/form-data; boundary=------------------------tRBkgLge19yKyt9txOIm0b]
+> POST /api/upload?debug=1 HTTP/2
+> Host: yo-dbms.onrender.com
+> User-Agent: curl/8.12.1
+> Accept: */*
+> Content-Length: 1366
+> Content-Type: multipart/form-data; boundary=------------------------tRBkgLge19yKyt9txOIm0b
+> 
+* upload completely sent off: 1366 bytes
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+< HTTP/2 200 
+< date: Mon, 01 Jun 2026 16:37:31 GMT
+< content-type: application/json
+< access-control-allow-origin: *
+< cf-cache-status: DYNAMIC
+< rndr-id: a1ce36f6-c91c-44a7
+< server: cloudflare
+< vary: Accept-Encoding
+< x-render-origin-server: gunicorn
+< cf-ray: a04fa4a2ea2b8469-TPE
+< alt-svc: h3=":443"; ma=86400
+< 
+* Connection #0 to host yo-dbms.onrender.com left intact

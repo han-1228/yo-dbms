@@ -1,16 +1,10 @@
-PORTFO_ID,STU_ID,COURSE_ID,AST_ID,TITLE,UPLOAD_DATE,FILE_URL,
-P001,S15001,C001,A001,新竹市土地利用地圖,2026/5/1,google drive連結,
-P002,S15005,C001,A001,人口密度分析圖,2026/5/3,google drive連結,
-P003,S15036,C001,A001,商圈分布GIS分析,2026/5/4,google drive連結,
-P004,S15064,C001,A001,校園周邊土地利用分析,2026/5/5,google drive連結,
-P005,S15005,C003,A007,期中小組作業：通學路線安全分析,2026/5/8,google drive連結,
-P006,S15044,C003,A007,期中小組作業：校園熱島調查,2026/5/8,google drive連結,
-P007,S15078,C003,A008,期末報告：地方商圈變遷,2026/6/1,google drive連結,
-P008,S15036,C004,A009,小組簡報：都市交通問題,2026/5/15,google drive連結,
-P009,S15064,C004,A010,書面報告：社區人口變遷,2026/6/3,google drive連結,
-,,,,,,,
-,,,,,,,
-,,,,,,,
-,,,,,,,
-,,,,,,,
-,,,,,,,
+﻿PORTFO_ID,STU_ID,COURSE_ID,AST_ID,TITLE,FILE_URL,UPLOAD_DATE
+P001,S15001,C001,A001,新竹市土地利用地圖,https://docs.google.com/presentation/d/1n3ntgco5ayCxPFqW9AZzGBAtfQSBDJyE/edit?usp=sharing&ouid=100714081121496458638&rtpof=true&sd=true,2026-5-1
+P002,S15005,C001,A001,人口密度分析圖,https://google.com,2026-5-3
+P003,S15036,C001,A001,商圈分布GIS分析,https://google.com,2026-5-4
+P004,S15064,C001,A001,校園周邊土地利用分析,https://google.com,2026-5-5
+P005,S15005,C003,A007,期中小組作業：通學路線安全分析,https://google.com,2026-5-8
+P006,S15044,C003,A007,期中小組作業：校園熱島調查,https://google.com,2026-5-8
+P007,S15078,C003,A008,期末報告：地方商圈變遷,https://google.com,2026-6-1
+P008,S15036,C004,A009,小組簡報：都市交通問題,https://google.com,2026-5-15
+P009,S15064,C004,A010,書面報告：社區人口變遷,https://google.com,2026-6-3
