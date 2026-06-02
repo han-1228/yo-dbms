@@ -212,7 +212,7 @@ def home():
             import re
             content = re.sub(
                 r"(const|let)\s+baseUrl\s*=\s*['\"].*?['\"];",
-                f"const baseUrl = '{api_base}';",
+                f"let baseUrl = '{api_base}';",
                 content,
                 count=1
             )
