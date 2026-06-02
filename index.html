@@ -682,7 +682,16 @@
   </main>
 
   <script>
-    const baseUrl = 'http://localhost:5001/api';
+    let baseUrl = 'http://localhost:5001/api';
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      if (!baseUrl.startsWith('http')) {
+        baseUrl = window.location.origin + baseUrl;
+      } else {
+        baseUrl = window.location.origin.includes('zeabur.app') 
+          ? window.location.origin + '/api' 
+          : 'https://yo-dbms.onrender.com/api';
+      }
+    }
     let currentCourseId = '';
     let currentCourseWeights = {}; 
 

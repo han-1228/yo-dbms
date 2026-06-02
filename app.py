@@ -211,7 +211,7 @@ def home():
             # Dynamically replace the baseUrl inside index.html based on environmental variable
             import re
             content = re.sub(
-                r"const baseUrl\s*=\s*['\"].*?['\"];",
+                r"(const|let)\s+baseUrl\s*=\s*['\"].*?['\"];",
                 f"const baseUrl = '{api_base}';",
                 content,
                 count=1
