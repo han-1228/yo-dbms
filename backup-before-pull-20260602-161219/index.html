@@ -424,7 +424,7 @@
         cb.closest('tr').remove();
       }
       btn.innerText = origText; btn.disabled = false;
-      alert(`刪除完畢！成功: ${successCount} 筆` + (failCount > 0 ? `, 失敗: ${failCount} 筆 (可能為前端測試資料)` : ''));
+      alert(`刪除完畢！成功: ${successCount} 筆` + (failCount > 0 ? `, 失敗: ${failCount} 筆 ` : ''));
       const selectAllCb = document.getElementById('selectAllStudents'); if(selectAllCb) selectAllCb.checked = false;
     }
 

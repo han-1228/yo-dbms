@@ -12,6 +12,8 @@ import re
 load_dotenv()
 
 app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False
+app.json.ensure_ascii = False
 CORS(app)
 
 # 使用專案目錄作為基準路徑，確保在不同工作目錄下仍能正確找到 CSV 與憑證
@@ -202,8 +204,33 @@ def rows_to_dicts(cursor, rows):
 def home():
     index_path = os.path.join(BASE_DIR, 'index.html')
     if os.path.exists(index_path):
-        return send_file(index_path)
+        try:
+            with open(index_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            api_base = os.getenv('API_BASE_URL', '/api')
+            # Dynamically replace the baseUrl inside index.html based on environmental variable
+            import re
+            content = re.sub(
+                r"const baseUrl\s*=\s*['\"].*?['\"];",
+                f"const baseUrl = '{api_base}';",
+                content,
+                count=1
+            )
+            from flask import make_response
+            resp = make_response(content)
+            resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            resp.headers['Pragma'] = 'no-cache'
+            resp.headers['Expires'] = '0'
+            return resp
+        except Exception as e:
+            from flask import make_response
+            resp = make_response(send_file(index_path))
+            resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            resp.headers['Pragma'] = 'no-cache'
+            resp.headers['Expires'] = '0'
+            return resp
     return jsonify({"message": "API 伺服器（MySQL）正常運作中！"}), 200
+
 
 # 新增：支援 /api 與 /api/ 的健康檢查（供前端暖機使用）
 @app.route('/api', methods=['GET'])
@@ -226,6 +253,51 @@ def get_students():
         conn.close()
         return jsonify(data), 200
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/students', methods=['POST'])
+def save_student():
+    try:
+        payload = request.get_json(silent=True) or {}
+        stu_id = payload.get('STU_ID')
+        stu_name = payload.get('STU_NAME')
+        class_name = payload.get('CLASS_NAME')
+        seat_num = payload.get('SEAT_NUM')
+        
+        if not stu_id or not stu_name:
+            return jsonify({'error': '學號與姓名為必填欄位！'}), 400
+            
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        
+        # 檢查該學生是否存在
+        cur.execute("SELECT STU_ID FROM Students WHERE STU_ID = %s", (stu_id,))
+        row = cur.fetchone()
+        
+        if row:
+            # 更新
+            cur.execute(
+                "UPDATE Students SET STU_NAME = %s, CLASS_NAME = %s, SEAT_NUM = %s WHERE STU_ID = %s",
+                (stu_name, class_name, seat_num, stu_id)
+            )
+            message = "更新成功"
+        else:
+            # 新增
+            cur.execute(
+                "INSERT INTO Students (STU_ID, STU_NAME, CLASS_NAME, SEAT_NUM) VALUES (%s, %s, %s, %s)",
+                (stu_id, stu_name, class_name, seat_num)
+            )
+            message = "新增成功"
+            
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'ok': True, 'message': message}), 200
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/courses', methods=['GET'])
@@ -278,13 +350,47 @@ def get_course_portfolios(course_id):
         data = rows_to_dicts(cur, rows)
         # 新增：將 FILE_URL 與 TITLE 組成 HTML 超連結欄位 FILE_LINK
         for item in data:
-            url = item.get('FILE_URL') or ''
+            url = (item.get('FILE_URL') or '').strip()
             title = item.get('TITLE') or url
             if url:
+                # 確保 url 加上協定，避免瀏覽器當作本機相對路徑
+                href_url = url
+                if not (url.startswith('http://') or url.startswith('https://')):
+                    href_url = f"https://{url}"
                 # 使用雙引號並加上安全屬性，前端可直接插入為超連結
-                item['FILE_LINK'] = f"<a href=\"{url}\" target=\"_blank\" rel=\"noopener noreferrer\">{title}</a>"
+                item['FILE_LINK'] = f"<a href=\"{href_url}\" target=\"_blank\" rel=\"noopener noreferrer\">{title}</a>"
             else:
                 item['FILE_LINK'] = None
+        cur.close()
+        conn.close()
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/course/<course_id>/scores', methods=['GET'])
+def get_course_scores(course_id):
+    try:
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+        query = """
+            SELECT 
+                s.STU_ID, 
+                s.STU_NAME, 
+                s.CLASS_NAME, 
+                s.SEAT_NUM, 
+                a.AST_ID, 
+                a.AST_NAME, 
+                sc.SCORE 
+            FROM Enrollments e
+            JOIN Students s ON e.STU_ID = s.STU_ID
+            JOIN Assessments a ON e.COURSE_ID = a.COURSE_ID
+            LEFT JOIN Scores sc ON s.STU_ID = sc.STU_ID AND a.AST_ID = sc.AST_ID
+            WHERE e.COURSE_ID = %s
+            ORDER BY s.CLASS_NAME, s.SEAT_NUM, a.AST_ID
+        """
+        cur.execute(query, (course_id,))
+        rows = cur.fetchall()
+        data = rows_to_dicts(cur, rows)
         cur.close()
         conn.close()
         return jsonify(data), 200
@@ -774,6 +880,43 @@ def api_upload():
                     continue
                 yield line
 
+        # 驗證 CSV 表頭是否符合 SQL 要求
+        try:
+            clean_lines = get_clean_lines()
+            first_line = next(clean_lines, None)
+            if not first_line:
+                return jsonify({'error': '格式錯誤：上傳的檔案為空！'}), 400
+            
+            reader = csv.reader([first_line])
+            header_row = next(reader, None)
+            if not header_row:
+                return jsonify({'error': '格式錯誤：無法讀取 CSV 表頭！'}), 400
+
+            csv_headers_normalized = {h.strip().lower().replace(' ', '').replace('_', '') for h in header_row if h}
+            required_cols_map = {
+                'students': {'stuid', 'stuname', 'classname', 'seatnum'},
+                'courses': {'courseid', 'coursename', 'semester'},
+                'enrollments': {'enrollid', 'stuid', 'courseid'},
+                'assessments': {'astid', 'courseid', 'astname', 'category', 'weight'},
+                'scores': {'scoreid', 'stuid', 'astid', 'score'},
+                'portfolios': {'stuid', 'astid', 'title', 'uploaddate', 'fileurl'}
+            }
+            req = required_cols_map.get(ftype, set())
+            missing = req - csv_headers_normalized
+            if missing:
+                col_name_mapping = {
+                    'stuid': 'STU_ID', 'stuname': 'STU_NAME', 'classname': 'CLASS_NAME', 'seatnum': 'SEAT_NUM',
+                    'courseid': 'COURSE_ID', 'coursename': 'COURSE_NAME', 'semester': 'SEMESTER',
+                    'enrollid': 'ENROLL_ID', 'astid': 'AST_ID', 'astname': 'AST_NAME', 'category': 'CATEGORY',
+                    'weight': 'WEIGHT', 'scoreid': 'SCORE_ID', 'score': 'SCORE', 'title': 'TITLE',
+                    'uploaddate': 'UPLOAD_DATE', 'fileurl': 'FILE_URL'
+                }
+                missing_names = [col_name_mapping.get(m, m.upper()) for m in missing]
+                return jsonify({'error': f'格式錯誤：上傳的 CSV 缺少必要的欄位：{", ".join(missing_names)}'}), 400
+        except Exception as e:
+            return jsonify({'error': f'格式錯誤：剖析表頭失敗。{str(e)}'}), 400
+
+
         def records_generator():
             # 先用 get_clean_lines() 來過濾註解/空行
             try:
@@ -837,6 +980,16 @@ def api_upload():
                             processed[6] = convert_google_link(processed[6])
                         yield tuple(processed)
 
+        table_map = {
+            'students': 'Students',
+            'courses': 'Courses',
+            'enrollments': 'Enrollments',
+            'assessments': 'Assessments',
+            'scores': 'Scores',
+            'portfolios': 'Portfolios'
+        }
+        table_name = table_map.get(ftype)
+
         # 實際分批寫入資料庫
         conn = get_mysql_connection()
         cur = conn.cursor()
@@ -855,10 +1008,49 @@ def api_upload():
             conn.close()
             return jsonify({'preview_count': len(samples), 'samples': samples}), 200
 
-        inserted = executemany_in_chunks(conn, cur, sql, records_generator(), chunk_size=500)
+        # 查詢寫入前的總數
+        count_before = 0
+        if table_name:
+            try:
+                cur.execute(f"SELECT COUNT(*) FROM {table_name}")
+                count_before = cur.fetchone()[0]
+            except:
+                pass
+
+        # 讀取所有待寫入的紀錄
+        records = list(records_generator())
+        total_uploaded = len(records)
+
+        # 分批執行寫入
+        chunk_size = 500
+        for i in range(0, len(records), chunk_size):
+            chunk = records[i:i+chunk_size]
+            cur.executemany(sql, chunk)
+        conn.commit()
+
+        # 查詢寫入後的總數
+        count_after = count_before
+        if table_name:
+            try:
+                cur.execute(f"SELECT COUNT(*) FROM {table_name}")
+                count_after = cur.fetchone()[0]
+            except:
+                pass
+
+        new_inserted = max(0, count_after - count_before)
+        duplicates = max(0, total_uploaded - new_inserted)
+
         cur.close()
         conn.close()
-        return jsonify({'message': f'imported {inserted} rows into {ftype}'}), 200
+
+        # 回傳包含詳細上傳統計資訊的訊息
+        msg = f"匯入完成！上傳資料共 {total_uploaded} 筆，成功新增 {new_inserted} 筆，重複/忽略 {duplicates} 筆。"
+        return jsonify({
+            'message': msg,
+            'total_uploaded': total_uploaded,
+            'new_inserted': new_inserted,
+            'duplicates': duplicates
+        }), 200
     except Exception as e:
         try:
             conn.rollback()
