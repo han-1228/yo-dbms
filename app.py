@@ -958,7 +958,13 @@ def api_upload():
         if ftype not in allowed:
             return jsonify({'error': 'invalid type parameter'}), 400
 
-        stream = io.TextIOWrapper(file.stream, encoding='utf-8-sig')
+        try:
+            content_bytes = file.read()
+            content_str = content_bytes.decode('utf-8-sig')
+        except Exception as e:
+            return jsonify({'error': f'檔案解碼失敗，請確認上傳的 CSV 檔案為 UTF-8 編碼。詳細錯誤: {str(e)}'}), 400
+
+        stream = io.StringIO(content_str)
 
         # SQL 與期望欄位對應（順序對應到 INSERT 中的欄位順序）
         cols_map = {
