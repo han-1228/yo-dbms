@@ -75,6 +75,13 @@ def init_db_from_csv_mysql():
         conn = get_mysql_connection()
         cursor = conn.cursor()
 
+        # 移除可能導致 MySQL 1442 錯誤的衝突 Trigger
+        try:
+            cursor.execute("DROP TRIGGER IF EXISTS tr_assess_norm_after_insert")
+            cursor.execute("DROP TRIGGER IF EXISTS tr_assess_norm_after_update")
+        except:
+            pass
+
         # 建表（若不存在）
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS Students (
@@ -153,7 +160,7 @@ def init_db_from_csv_mysql():
             ("Scores", os.path.join(BASE_DIR, 'scores.csv'),
              "INSERT IGNORE INTO Scores (SCORE_ID, STU_ID, AST_ID, SCORE) VALUES (%s, %s, %s, %s)"),
             ("Portfolios", os.path.join(BASE_DIR, 'portfolios.csv'),
-             "INSERT IGNORE INTO Portfolios (PORTFO_ID, STU_ID, COURSE_ID, AST_ID, TITLE, UPLOAD_DATE, FILE_URL) VALUES (%s, %s, %s, %s, %s, %s, %s)")
+             "INSERT IGNORE INTO Portfolios (PORTFO_ID, STU_ID, COURSE_ID, AST_ID, TITLE, FILE_URL, UPLOAD_DATE) VALUES (%s, %s, %s, %s, %s, %s, %s)")
         ]
 
         for table_name, path, query in files_to_import:
