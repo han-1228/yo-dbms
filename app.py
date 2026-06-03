@@ -380,6 +380,7 @@ def get_course_scores(course_id):
                 s.SEAT_NUM, 
                 a.AST_ID, 
                 a.AST_NAME, 
+                a.WEIGHT,
                 sc.SCORE 
             FROM Enrollments e
             JOIN Students s ON e.STU_ID = s.STU_ID
@@ -728,21 +729,38 @@ def update_assessment_weight(course_id, ast_id):
 
 @app.route('/api/course/<course_id>/scores', methods=['POST'])
 def save_course_scores(course_id):
-    """接收 JSON 陣列，每個 item 包含 STU_ID, AST_ID, SCORE，選擇性包含 SCORE_ID。
-    會驗證 AST_ID 是否屬於 course_id，並對成績做更新或新增（upsert）。
-    回傳已新增與已更新的筆數。
+    """接收 JSON 陣列或物件，對成績與權重做更新。
+    物件格式範例：
+    {
+      "scores": [{"STU_ID": "...", "AST_ID": "...", "SCORE": 90}],
+      "weights": {"A001": 0.3, "A002": 0.7}
+    }
     """
     try:
         data = request.get_json(silent=True)
-        if not isinstance(data, list):
-            return jsonify({'error': 'expected a JSON array'}), 400
+        scores = []
+        weights = {}
+        if isinstance(data, list):
+            scores = data
+        elif isinstance(data, dict):
+            scores = data.get('scores', [])
+            weights = data.get('weights', {})
+        else:
+            return jsonify({'error': 'expected a JSON array or object'}), 400
 
         conn = get_mysql_connection()
         cur = conn.cursor()
         inserted = 0
         updated = 0
 
-        for item in data:
+        # 更新權重
+        for ast_id, w_val in weights.items():
+            cur.execute("SELECT AST_ID FROM Assessments WHERE AST_ID = %s AND COURSE_ID = %s", (ast_id, course_id))
+            if cur.fetchone() is not None:
+                cur.execute("UPDATE Assessments SET WEIGHT = %s WHERE AST_ID = %s AND COURSE_ID = %s", (w_val, ast_id, course_id))
+
+        # 更新成績
+        for item in scores:
             stu_id = item.get('STU_ID')
             ast_id = item.get('AST_ID')
             score_val = item.get('SCORE')

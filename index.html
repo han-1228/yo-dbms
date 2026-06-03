@@ -694,6 +694,7 @@
     }
     let currentCourseId = '';
     let currentCourseWeights = {}; 
+    let currentAstName2Id = {}; 
 
     function toggleSidebar() {
       const sidebar = document.querySelector('.sidebar-left');
@@ -797,10 +798,21 @@
       if (input !== null && input.trim() !== '') {
           let w = parseFloat(input);
           if (!isNaN(w) && w >= 0) {
-              currentCourseWeights[itemName] = w / 100; let th = document.getElementById(`th-weight-${itemName}`);
+              if (w > 100) {
+                  alert("單一項目的權重不能超過 100%！");
+                  return;
+              }
+              let tempWeights = { ...currentCourseWeights };
+              tempWeights[itemName] = w / 100;
+              let totalW = Object.values(tempWeights).reduce((a, b) => a + b, 0);
+              if (totalW > 1.001) {
+                  alert(`⚠️ 設定失敗：所有評量項目的權重總和為 ${Math.round(totalW * 100)}%，不能超過 100%！`);
+                  return;
+              }
+              
+              currentCourseWeights[itemName] = w / 100; 
+              let th = document.getElementById(`th-weight-${itemName}`);
               if (th) th.innerHTML = `${itemName} <br><span class="weight-badge">${w}%</span>`;
-              let totalW = 0; Object.values(currentCourseWeights).forEach(val => totalW += val);
-              if (Math.abs(totalW - 1.0) > 0.01) alert(`⚠️ 提醒：目前各項權重總和為 ${Math.round(totalW * 100)}%\n建議調整至 100% 確保總成績準確。`);
               recalculateAllAverages();
           } else { alert("請輸入有效的數字！"); }
       }
@@ -1033,21 +1045,57 @@
     async function saveScores() {
       if (!currentCourseId) { alert("請先選擇一門課程！"); return; }
       const btn = document.querySelector('#tab-scores .action-btn-solid'); const originalText = btn.innerText; btn.disabled = true; btn.innerText = "儲存中... ⏳";
-      const payload = []; const rows = document.querySelectorAll('#scores-tbody tr');
+      
+      const scoresPayload = []; 
+      const rows = document.querySelectorAll('#scores-tbody tr');
       rows.forEach(row => {
         const stuIdTd = row.querySelector('td:first-child'); if (!stuIdTd) return; const stuId = stuIdTd.innerText.trim();
         const inputs = row.querySelectorAll('.score-input');
         inputs.forEach(inp => {
           const scoreVal = inp.value.trim(); const astId = inp.getAttribute('data-ast-id'); 
-          if (scoreVal !== "" && astId) { payload.push({ STU_ID: stuId, AST_ID: astId, SCORE: parseFloat(scoreVal) }); }
+          if (scoreVal !== "" && astId) { 
+            scoresPayload.push({ STU_ID: stuId, AST_ID: astId, SCORE: parseFloat(scoreVal) }); 
+          }
         });
       });
-      if (payload.length === 0) { alert("沒有找到可儲存的成績資料！"); btn.disabled = false; btn.innerText = originalText; return; }
+
+      // Collect weights payload mapped by ast_id
+      const weightsPayload = {};
+      Object.keys(currentCourseWeights).forEach(itemName => {
+        const astId = currentAstName2Id[itemName];
+        if (astId) {
+          weightsPayload[astId] = currentCourseWeights[itemName] || 0;
+        }
+      });
+
+      const payload = {
+        scores: scoresPayload,
+        weights: weightsPayload
+      };
+
       try {
-        const res = await fetch(`${baseUrl}/course/${currentCourseId}/scores`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        if (!res.ok) { const txt = await res.text().catch(()=>null); throw new Error(txt || `伺服器回應 ${res.status}`); }
-        const json = await res.json(); alert(`🎉 成績儲存成功！\n資料庫回應 - 新增: ${json.inserted} 筆 / 更新: ${json.updated} 筆`);
-      } catch (err) { alert(`儲存失敗：${err.message || err}`); } finally { btn.disabled = false; btn.innerText = originalText; }
+        const res = await fetch(`${baseUrl}/course/${currentCourseId}/scores`, { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify(payload) 
+        });
+        if (!res.ok) {
+          const txt = await res.text().catch(()=>null);
+          let errMsg = txt || `伺服器回應 ${res.status}`;
+          try {
+            const jsonErr = JSON.parse(txt);
+            if (jsonErr && jsonErr.error) errMsg = jsonErr.error;
+          } catch(e) {}
+          throw new Error(errMsg);
+        }
+        const json = await res.json(); 
+        alert(`🎉 成績與權重儲存成功！\n資料庫回應 - 成績新增/更新: ${json.inserted + json.updated} 筆`);
+      } catch (err) { 
+        alert(`儲存失敗：${err.message || err}`); 
+      } finally { 
+        btn.disabled = false; 
+        btn.innerText = originalText; 
+      }
     }
 
     function fetchCourseData(courseId, type) { 
@@ -1064,16 +1112,47 @@
           if(data.length === 0) { tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align: center; color: #a0a0a0; padding: 20px;">目前沒有資料</td></tr>`; return; } 
           if (type === 'scores') { 
             const thead = document.getElementById('scores-thead'); thead.innerHTML = ''; 
-            let assessmentItems = []; let astName2Id = {};
-            data.forEach(row => { if (!assessmentItems.includes(row.AST_NAME)) { assessmentItems.push(row.AST_NAME); astName2Id[row.AST_NAME] = row.AST_ID; } }); 
-            currentCourseWeights = {}; let assessCount = assessmentItems.length; assessmentItems.forEach(item => { currentCourseWeights[item] = assessCount > 0 ? (1 / assessCount) : 0; });
+            let assessmentItems = []; 
+            currentAstName2Id = {}; 
+            currentCourseWeights = {};
+            
+            data.forEach(row => { 
+              if (!assessmentItems.includes(row.AST_NAME)) { 
+                assessmentItems.push(row.AST_NAME); 
+                currentAstName2Id[row.AST_NAME] = row.AST_ID; 
+                currentCourseWeights[row.AST_NAME] = (row.WEIGHT !== undefined && row.WEIGHT !== null) ? parseFloat(row.WEIGHT) : 0;
+              } 
+            }); 
+            
+            // If the sum of loaded weights is 0, fallback to equal split
+            let totalW = Object.values(currentCourseWeights).reduce((a, b) => a + b, 0);
+            if (totalW < 0.001) {
+              let assessCount = assessmentItems.length;
+              assessmentItems.forEach(item => {
+                currentCourseWeights[item] = assessCount > 0 ? (1 / assessCount) : 0;
+              });
+            }
+
             let headerHtml = `<tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th>`; 
-            assessmentItems.forEach(item => { let wPct = Math.round(currentCourseWeights[item] * 100); headerHtml += `<th class="clickable-th" onclick="changeWeight('${item}')" id="th-weight-${item}" title="點擊修改權重">${item} <br><span class="weight-badge">${wPct}%</span></th>`; }); 
+            assessmentItems.forEach(item => { 
+              let wPct = Math.round(currentCourseWeights[item] * 100); 
+              headerHtml += `<th class="clickable-th" onclick="changeWeight('${item}')" id="th-weight-${item}" title="點擊修改權重">${item} <br><span class="weight-badge">${wPct}%</span></th>`; 
+            }); 
             headerHtml += `<th style="color: var(--primary);">加權平均 AVG</th></tr>`; thead.innerHTML = headerHtml; 
-            let studentMatrix = {}; data.forEach(row => { if (!studentMatrix[row.STU_ID]) { studentMatrix[row.STU_ID] = { id: row.STU_ID, name: row.STU_NAME, className: row.CLASS_NAME, seatNum: row.SEAT_NUM, grades: {} }; } studentMatrix[row.STU_ID].grades[row.AST_NAME] = row.SCORE; }); 
+            
+            let studentMatrix = {}; 
+            data.forEach(row => { 
+              if (!studentMatrix[row.STU_ID]) { 
+                studentMatrix[row.STU_ID] = { id: row.STU_ID, name: row.STU_NAME, className: row.CLASS_NAME, seatNum: row.SEAT_NUM, grades: {} }; 
+              } 
+              studentMatrix[row.STU_ID].grades[row.AST_NAME] = row.SCORE; 
+            }); 
+            
             Object.values(studentMatrix).forEach(student => { 
               let rowHtml = `<tr><td style="font-weight:700;">${student.id}</td><td>${student.className}</td><td>${student.seatNum}</td><td style="font-weight:700;">${student.name}</td>`; 
-              assessmentItems.forEach(item => { let scoreValue = (student.grades[item] !== undefined && student.grades[item] !== null) ? student.grades[item] : ''; let astId = astName2Id[item]; 
+              assessmentItems.forEach(item => { 
+                let scoreValue = (student.grades[item] !== undefined && student.grades[item] !== null) ? student.grades[item] : ''; 
+                let astId = currentAstName2Id[item]; 
                 rowHtml += `<td><input type="number" class="score-input" data-item="${item}" data-ast-id="${astId}" value="${scoreValue}" oninput="calculateRowAverage(this)"></td>`; 
               }); 
               rowHtml += `<td class="avg-display">0.0</td></tr>`; tbody.innerHTML += rowHtml; 
