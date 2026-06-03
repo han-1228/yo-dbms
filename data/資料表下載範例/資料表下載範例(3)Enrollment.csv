@@ -1,0 +1,8 @@
+ENROLL_ID,STU_ID,COURSE_ID
+ex: E001,ex: S15001,ex: C001
+,,
+,,
+,,
+ENROLL_ID = 修課代碼,,
+STU_ID = 學生編號,,
+COURSE_ID = 課程編號,,

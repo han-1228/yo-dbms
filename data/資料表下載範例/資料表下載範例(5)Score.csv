@@ -1,0 +1,9 @@
+SCORE_ID,STU_ID,AST_ID,SCORE
+ex: SC001,ex: S15001,ex: A001,ex: 92/87/(0~100)
+,,,
+,,,
+,,,
+SCORE_ID = 成績代碼,,,
+STU_ID = 學生編號,,,
+AST_ID = 評量代碼,,,
+SCORE = 成績,,,

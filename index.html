@@ -623,14 +623,88 @@
     </div>
 
     <div id="view-upload" class="view-section">
-      <h2>資料上傳</h2>
+      <div class="page-header">
+        <h2>資料上傳</h2>
+        <button class="action-btn action-btn-solid" onclick="downloadAllSamples()" style="text-transform: none; letter-spacing: 0; font-size: 13px;">📥 下載範例整包 (ZIP)</button>
+      </div>
       <div class="upload-grid">
-        <div class="upload-card"><h3>Students 名單</h3><div class="file-input-wrapper"><button class="action-btn">選擇檔案</button><input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)"></div><div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div><button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button></div>
-        <div class="upload-card"><h3>Courses 課程</h3><div class="file-input-wrapper"><button class="action-btn">選擇檔案</button><input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)"></div><div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div><button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button></div>
-        <div class="upload-card"><h3>Enrollments 修課紀錄</h3><div class="file-input-wrapper"><button class="action-btn">選擇檔案</button><input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)"></div><div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div><button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button></div>
-        <div class="upload-card"><h3>Assessments 評量項目</h3><div class="file-input-wrapper"><button class="action-btn">選擇檔案</button><input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)"></div><div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div><button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button></div>
-        <div class="upload-card"><h3>Scores 歷史成績</h3><div class="file-input-wrapper"><button class="action-btn">選擇檔案</button><input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)"></div><div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div><button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button></div>
-        <div class="upload-card"><h3>Portfolios 作品集</h3><div class="file-input-wrapper"><button class="action-btn">選擇檔案</button><input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)"></div><div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div><button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button></div>
+        <div class="upload-card">
+          <h3>Students 名單</h3>
+          <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap;">
+            <div class="file-input-wrapper" style="margin-bottom: 0;">
+              <button class="action-btn" style="padding: 10px 18px; font-size: 12px; height: auto;">選擇檔案</button>
+              <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
+            </div>
+            <button class="action-btn" onclick="downloadSample('資料表下載範例(1)Student.csv')" style="padding: 10px 18px; font-size: 12px; height: auto;">下載範例</button>
+          </div>
+          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
+          <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
+        </div>
+        
+        <div class="upload-card">
+          <h3>Courses 課程</h3>
+          <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap;">
+            <div class="file-input-wrapper" style="margin-bottom: 0;">
+              <button class="action-btn" style="padding: 10px 18px; font-size: 12px; height: auto;">選擇檔案</button>
+              <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
+            </div>
+            <button class="action-btn" onclick="downloadSample('資料表下載範例(2)Course.csv')" style="padding: 10px 18px; font-size: 12px; height: auto;">下載範例</button>
+          </div>
+          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
+          <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
+        </div>
+        
+        <div class="upload-card">
+          <h3>Enrollments 修課紀錄</h3>
+          <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap;">
+            <div class="file-input-wrapper" style="margin-bottom: 0;">
+              <button class="action-btn" style="padding: 10px 18px; font-size: 12px; height: auto;">選擇檔案</button>
+              <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
+            </div>
+            <button class="action-btn" onclick="downloadSample('資料表下載範例(3)Enrollment.csv')" style="padding: 10px 18px; font-size: 12px; height: auto;">下載範例</button>
+          </div>
+          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
+          <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
+        </div>
+        
+        <div class="upload-card">
+          <h3>Assessments 評量項目</h3>
+          <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap;">
+            <div class="file-input-wrapper" style="margin-bottom: 0;">
+              <button class="action-btn" style="padding: 10px 18px; font-size: 12px; height: auto;">選擇檔案</button>
+              <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
+            </div>
+            <button class="action-btn" onclick="downloadSample('資料表下載範例(4)Assessment.csv')" style="padding: 10px 18px; font-size: 12px; height: auto;">下載範例</button>
+          </div>
+          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
+          <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
+        </div>
+        
+        <div class="upload-card">
+          <h3>Scores 歷史成績</h3>
+          <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap;">
+            <div class="file-input-wrapper" style="margin-bottom: 0;">
+              <button class="action-btn" style="padding: 10px 18px; font-size: 12px; height: auto;">選擇檔案</button>
+              <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
+            </div>
+            <button class="action-btn" onclick="downloadSample('資料表下載範例(5)Score.csv')" style="padding: 10px 18px; font-size: 12px; height: auto;">下載範例</button>
+          </div>
+          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
+          <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
+        </div>
+        
+        <div class="upload-card">
+          <h3>Portfolios 作品集</h3>
+          <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap;">
+            <div class="file-input-wrapper" style="margin-bottom: 0;">
+              <button class="action-btn" style="padding: 10px 18px; font-size: 12px; height: auto;">選擇檔案</button>
+              <input type="file" class="file-input-hidden" accept=".csv" onchange="updateFileNameDisplay(this)">
+            </div>
+            <button class="action-btn" onclick="downloadSample('資料表下載範例(6)Portfolio.csv')" style="padding: 10px 18px; font-size: 12px; height: auto;">下載範例</button>
+          </div>
+          <div style="font-size:12px; color:var(--primary); margin-bottom:15px;" class="file-name-text">尚未選取檔案</div>
+          <button class="action-btn action-btn-solid" style="width: 100%;" onclick="simulateUpload(this)">開始上傳匯入</button>
+        </div>
       </div>
     </div>
 
@@ -1463,6 +1537,15 @@
     }
 
     
+    /* === 範例資料下載動作 === */
+    function downloadAllSamples() {
+      window.location.href = `${baseUrl}/download/sample/zip`;
+    }
+    
+    function downloadSample(filename) {
+      window.location.href = `${baseUrl}/download/sample/${encodeURIComponent(filename)}`;
+    }
+
     window.onload = () => { fetch(`${baseUrl}/`).catch(err => console.log("Render server warming up...")); fetchStudentsFromAPI(); fetchCoursesFromAPI(); };
     
     function fetchStudentsFromAPI() { 

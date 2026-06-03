@@ -1,0 +1,10 @@
+AST_ID,COURSE_ID,AST_NAME,CATEGORY,WEIGHT
+ex: A001,ex: C001,ex: 期中考/期末考,ex: 作品/考試/平時,ex:10/20/30/40
+,,,,
+,,,,
+,,,,
+AST_ID = 評量代碼,,,,
+COURSE_ID = 課程編號,,,,
+AST_NAME = 評量項目名稱,,,,
+CATEGORY = 評量類別,,,,
+WEIGHT = 權重,,,,

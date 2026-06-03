@@ -1186,6 +1186,30 @@ def api_upload():
             pass
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/download/sample/zip', methods=['GET'])
+def download_sample_zip():
+    """下載整包範例 ZIP 檔案。"""
+    try:
+        zip_path = os.path.join(BASE_DIR, 'data', '資料表下載範例.zip')
+        if os.path.exists(zip_path):
+            return send_file(zip_path, as_attachment=True, download_name='資料表下載範例.zip')
+        return jsonify({'error': '找不到範例壓縮檔'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/download/sample/<filename>', methods=['GET'])
+def download_sample_file(filename):
+    """下載單一 CSV 範例檔案。"""
+    try:
+        safe_filename = os.path.basename(filename)
+        sample_dir = os.path.join(BASE_DIR, 'data', '資料表下載範例')
+        file_path = os.path.join(sample_dir, safe_filename)
+        if os.path.exists(file_path):
+            return send_file(file_path, as_attachment=True)
+        return jsonify({'error': f'找不到範例檔案: {safe_filename}'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 def executemany_in_chunks(conn, cur, sql, records_iter, chunk_size=500):
     total = 0
     chunk = []

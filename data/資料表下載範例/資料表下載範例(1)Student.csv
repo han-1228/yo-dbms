@@ -1,0 +1,9 @@
+STU_ID,STU_NAME,CLASS_NAME,SEAT_NUM
+ex: S15001,ex: 李東敏 ,ex: 201,ex: 1
+,,,
+,,,
+,,,
+STU_ID = 學生編號,,,
+STU_NAME = 學生名稱,,,
+CLASS_NAME = 班級名稱 ,,,
+SEAT_NUM = 座號 ,,,

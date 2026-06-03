@@ -1,0 +1,8 @@
+COURSE_ID,COURSE_NAME,SEMESTER
+ex: C001,ex: GIS地理資訊系統,ex: 114-1
+,,
+,,
+,,
+COURSE_ID = 課程編號,,
+COURSE_NAME = 課程名稱,,
+SEMESTER = 學期,,

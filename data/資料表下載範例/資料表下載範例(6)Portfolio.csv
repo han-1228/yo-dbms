@@ -1,0 +1,11 @@
+PORTFO_ID,STU_ID,AST_ID,TITLE,UPLOAD_DATE,FILE_URL
+ex: P001,ex: S001,ex: A001,ex: 新竹市土地利用地圖,ex: YYYY/MM/DD,ex: google drive連結
+,,,,,
+,,,,,
+,,,,,
+PORTFO_ID = 作品代碼,,,,,
+STU_ID = 學生編號,,,,,
+AST_ID = 評量代碼,,,,,
+TITLE = 作品名稱,,,,,
+UPLOAD_DATE = 上傳日期,,,,,
+FILE_URL = 檔案連結,,,,,
