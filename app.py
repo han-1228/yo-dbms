@@ -345,7 +345,7 @@ def get_course_portfolios(course_id):
         conn = get_mysql_connection()
         cur = conn.cursor()
         query = """
-            SELECT p.STU_ID, p.AST_ID, s.CLASS_NAME, s.SEAT_NUM, s.STU_NAME, 
+            SELECT p.PORTFO_ID, p.STU_ID, p.AST_ID, s.CLASS_NAME, s.SEAT_NUM, s.STU_NAME, 
                    p.TITLE, p.FILE_URL, p.UPLOAD_DATE 
             FROM Portfolios p 
             JOIN Students s ON p.STU_ID = s.STU_ID 
@@ -512,6 +512,103 @@ def api_echo():
             'json': request.get_json(silent=True)
         }
         return jsonify({'echo': data}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/course/<course_id>/enrollments', methods=['POST'])
+def add_enrollment(course_id):
+    """將學號 STU_ID 的學生加入此課程。"""
+    try:
+        payload = request.get_json(silent=True) or {}
+        stu_id = (payload.get('STU_ID') or '').strip()
+        if not stu_id:
+            return jsonify({'error': '學號 (STU_ID) 為必填欄位！'}), 400
+
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+
+        # 1. 檢查學生是否存在於 Students 表
+        cur.execute("SELECT STU_NAME FROM Students WHERE STU_ID = %s", (stu_id,))
+        stu_row = cur.fetchone()
+        if not stu_row:
+            cur.close()
+            conn.close()
+            return jsonify({'error': f'找不到學號為 {stu_id} 的學生，請先至學生管理頁面新增該學生。'}), 400
+
+        # 2. 檢查是否已經修課
+        cur.execute("SELECT ENROLL_ID FROM Enrollments WHERE STU_ID = %s AND COURSE_ID = %s", (stu_id, course_id))
+        enroll_row = cur.fetchone()
+        if enroll_row:
+            cur.close()
+            conn.close()
+            return jsonify({'error': '該學生已在此課程的修課名單中。'}), 400
+
+        # 3. 產生 ENROLL_ID 並插入
+        enroll_id = f"EN{int(time.time()*1000)}{random.randint(100,999)}"
+        cur.execute(
+            "INSERT INTO Enrollments (ENROLL_ID, STU_ID, COURSE_ID) VALUES (%s, %s, %s)",
+            (enroll_id, stu_id, course_id)
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'ok': True, 'message': '成功將學生加入課程！', 'enroll_id': enroll_id}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/course/<course_id>/portfolios', methods=['POST'])
+def add_portfolio_item(course_id):
+    """為課程中的某個學生新增作品集項目。"""
+    try:
+        payload = request.get_json(silent=True) or {}
+        stu_id = (payload.get('STU_ID') or '').strip()
+        ast_id = (payload.get('AST_ID') or '').strip()
+        title = (payload.get('TITLE') or '').strip()
+        file_url = (payload.get('FILE_URL') or '').strip()
+
+        if not stu_id:
+            return jsonify({'error': '學生 (STU_ID) 為必填欄位！'}), 400
+        if not ast_id:
+            return jsonify({'error': '評量項目 (AST_ID) 為必填欄位！'}), 400
+        if not title:
+            return jsonify({'error': '作品標題 (TITLE) 為必填欄位！'}), 400
+
+        conn = get_mysql_connection()
+        cur = conn.cursor()
+
+        # 1. 檢查學生是否修讀該課程
+        cur.execute("SELECT ENROLL_ID FROM Enrollments WHERE STU_ID = %s AND COURSE_ID = %s", (stu_id, course_id))
+        enroll_row = cur.fetchone()
+        if not enroll_row:
+            cur.close()
+            conn.close()
+            return jsonify({'error': '該學生未修讀此課程，無法新增作品。'}), 400
+
+        # 2. 檢查評量項目是否存在且屬於該課程
+        cur.execute("SELECT AST_ID FROM Assessments WHERE AST_ID = %s AND COURSE_ID = %s", (ast_id, course_id))
+        ast_row = cur.fetchone()
+        if not ast_row:
+            cur.close()
+            conn.close()
+            return jsonify({'error': '無效的評量項目或該評量不屬於此課程。'}), 400
+
+        # 3. 轉換 Google Link 格式
+        converted_url = convert_google_link(file_url)
+
+        # 4. 產生上傳日期 (YYYY-MM-DD)
+        upload_date = time.strftime('%Y-%m-%d')
+
+        # 5. 產生 PORTFO_ID 並插入
+        portfo_id = f"PF{int(time.time()*1000)}{random.randint(100,999)}"
+        query = """
+            INSERT INTO Portfolios (PORTFO_ID, STU_ID, COURSE_ID, AST_ID, TITLE, UPLOAD_DATE, FILE_URL)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """
+        cur.execute(query, (portfo_id, stu_id, course_id, ast_id, title, upload_date, converted_url))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'ok': True, 'message': '成功新增作品集！', 'portfo_id': portfo_id}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

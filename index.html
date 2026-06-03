@@ -639,11 +639,30 @@
       <h2 id="course-detail-title">Course Name</h2>
       <div class="course-tabs"><button class="tab-btn active" onclick="switchCourseTab('roster', this)">Roster 名單</button><button class="tab-btn" onclick="switchCourseTab('scores', this)">Scores 成績</button><button class="tab-btn" onclick="switchCourseTab('portfolios', this)">Portfolios 作品</button></div>
       <div id="tab-roster" class="tab-content active">
-        <div style="text-align: right; margin-bottom: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <select id="enroll-student-select" class="round-search-select" style="min-width: 240px; height: 38px; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border);">
+              <option value="">載入學生名單...</option>
+            </select>
+            <button class="action-btn action-btn-solid" onclick="enrollStudentToCourse()" style="height: 38px; padding: 0 20px; font-size: 13px; text-transform: none; letter-spacing: 0; border-radius: 20px;">+ 加入學生</button>
+          </div>
           <button class="action-btn" onclick="exportTableToCSV('roster-table', currentCourseId + '_名單.csv')">匯出名單</button>
         </div>
         <div class="table-responsive">
-          <table id="roster-table"><thead><tr><th>學號 ID</th><th>班級 Class</th><th>座號 No.</th><th>姓名 Name</th></tr></thead><tbody id="roster-tbody"><tr><td colspan="4" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr></tbody></table>
+          <table id="roster-table">
+            <thead>
+              <tr>
+                <th>學號 ID</th>
+                <th>班級 Class</th>
+                <th>座號 No.</th>
+                <th>姓名 Name</th>
+                <th>操作 Action</th>
+              </tr>
+            </thead>
+            <tbody id="roster-tbody">
+              <tr><td colspan="5" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
       <div id="tab-scores" class="tab-content">
@@ -656,11 +675,58 @@
         </div>
       </div>
       <div id="tab-portfolios" class="tab-content">
-        <div style="text-align: right; margin-bottom: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+          <button class="action-btn action-btn-solid" onclick="togglePortfolioForm(true)" id="btn-toggle-portfolio-form">+ 新增作品</button>
           <button class="action-btn" onclick="exportTableToCSV('portfolios-table', currentCourseId + '_作品集.csv')">匯出作品</button>
         </div>
+
+        <!-- 新增作品表單卡片 -->
+        <div id="add-portfolio-card" style="display: none; background: var(--bg-card); border: 1px dashed var(--primary); border-radius: 12px; padding: 20px; margin-bottom: 20px; animation: fadeIn 0.3s ease;">
+          <h3 style="margin-top: 0; margin-bottom: 15px; font-family: 'Playfair Display', serif; font-size: 18px; color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: 8px;">+ 新增作品 Portfolio</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; align-items: flex-end;">
+            <div>
+              <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; font-weight: bold;">學生 Student</label>
+              <select id="portfolio-student-select" class="round-search-select" style="width: 100%; height: 38px; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); box-sizing: border-box;">
+                <option value="">載入學生中...</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; font-weight: bold;">評量項目 Assessment</label>
+              <select id="portfolio-assessment-select" class="round-search-select" style="width: 100%; height: 38px; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); box-sizing: border-box;">
+                <option value="">載入評量中...</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; font-weight: bold;">作品標題 Title</label>
+              <input type="text" id="portfolio-title-input" class="round-search-input" style="width: 100%; height: 38px; padding: 6px 20px; border-radius: 20px; border: 1px solid var(--border); box-sizing: border-box;" placeholder="輸入作品標題...">
+            </div>
+            <div>
+              <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; font-weight: bold;">檔案連結 File Link URL</label>
+              <input type="text" id="portfolio-url-input" class="round-search-input" style="width: 100%; height: 38px; padding: 6px 20px; border-radius: 20px; border: 1px solid var(--border); box-sizing: border-box;" placeholder="https://drive.google.com/...">
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="action-btn action-btn-solid" onclick="addPortfolioSubmit()" style="height: 38px; padding: 0 20px; font-size: 13px; text-transform: none; letter-spacing: 0; border-radius: 20px; flex: 1;">儲存</button>
+              <button class="action-btn" onclick="togglePortfolioForm(false)" style="height: 38px; padding: 0 15px; font-size: 13px; text-transform: none; letter-spacing: 0; border-radius: 20px;">取消</button>
+            </div>
+          </div>
+        </div>
+
         <div class="table-responsive">
-          <table id="portfolios-table"><thead><tr><th>學號 ID</th><th>評量ID</th><th>作品 Portfolio</th><th>連結 Link</th><th>更新時間</th></tr></thead><tbody id="portfolios-tbody"><tr><td colspan="5" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr></tbody></table>
+          <table id="portfolios-table">
+            <thead>
+              <tr>
+                <th>學號 ID</th>
+                <th>評量ID</th>
+                <th>作品 Portfolio</th>
+                <th>連結 Link</th>
+                <th>更新時間</th>
+                <th>操作 Action</th>
+              </tr>
+            </thead>
+            <tbody id="portfolios-tbody">
+              <tr><td colspan="6" style="text-align: center; color: #a0a0a0; padding: 20px;">載入中...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -1101,7 +1167,8 @@
     function fetchCourseData(courseId, type) { 
       const tbody = document.getElementById(`${type}-tbody`); 
       let colSpan = 4;
-      if (type === 'portfolios') colSpan = 5;
+      if (type === 'roster') colSpan = 5;
+      if (type === 'portfolios') colSpan = 6;
       if (type === 'scores') colSpan = 10;
       tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align: center; color: #a0a0a0; padding: 20px;">資料載入中...</td></tr>`; 
       
@@ -1109,7 +1176,13 @@
         .then(res => res.json())
         .then(data => { 
           tbody.innerHTML = ''; 
-          if(data.length === 0) { tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align: center; color: #a0a0a0; padding: 20px;">目前沒有資料</td></tr>`; return; } 
+          if(data.length === 0) { 
+            tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align: center; color: #a0a0a0; padding: 20px;">目前沒有資料</td></tr>`; 
+            if (type === 'roster') {
+              loadEnrollStudentSelect();
+            }
+            return; 
+          } 
           if (type === 'scores') { 
             const thead = document.getElementById('scores-thead'); thead.innerHTML = ''; 
             let assessmentItems = []; 
@@ -1160,14 +1233,235 @@
             recalculateAllAverages();
           } else { 
             data.forEach(item => { 
-              if (type === 'roster') { tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td></tr>`; } 
+              if (type === 'roster') { 
+                tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.CLASS_NAME}</td><td>${item.SEAT_NUM}</td><td>${item.STU_NAME}</td><td><button class="action-btn" style="padding: 6px 12px; font-size: 12px; height: auto;" onclick="removeStudentFromCourse('${item.STU_ID}', '${item.STU_NAME}')">刪除</button></td></tr>`; 
+              } 
               else if (type === 'portfolios') { 
-                tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.AST_ID}</td><td style="font-weight:700;">${item.TITLE}</td><td>${item.FILE_LINK || '<span style="color:gray">無連結</span>'}</td><td>${item.UPLOAD_DATE}</td></tr>`;
+                tbody.innerHTML += `<tr><td style="font-weight:700;">${item.STU_ID}</td><td>${item.AST_ID}</td><td style="font-weight:700;">${item.TITLE}</td><td>${item.FILE_LINK || '<span style="color:gray">無連結</span>'}</td><td>${item.UPLOAD_DATE}</td><td><button class="action-btn" style="padding: 6px 12px; font-size: 12px; height: auto;" onclick="deletePortfolioItem('${item.PORTFO_ID}')">刪除</button></td></tr>`;
               } 
             }); 
           } 
+          if (type === 'roster') {
+            loadEnrollStudentSelect();
+          }
         }).catch(() => tbody.innerHTML = `<tr><td colspan="${colSpan}" style="color:#c48a7e; text-align: center; padding: 20px;">資料讀取失敗，請確認後端已更新</td></tr>`); 
     }
+
+    /* === 課程修課學生增刪邏輯與下拉選單加載 === */
+    async function loadEnrollStudentSelect() {
+      const select = document.getElementById('enroll-student-select');
+      if (!select) return;
+      select.innerHTML = '<option value="">載入學生名單中...</option>';
+      
+      try {
+        const resAll = await fetch(`${baseUrl}/students`);
+        if (!resAll.ok) throw new Error();
+        const allStudents = await resAll.json();
+        
+        const enrolledIds = new Set();
+        const rosterRows = document.querySelectorAll('#roster-tbody tr');
+        rosterRows.forEach(row => {
+          const idTd = row.querySelector('td:first-child');
+          if (idTd && idTd.innerText && idTd.innerText !== '載入中...' && idTd.innerText !== '目前沒有資料') {
+            enrolledIds.add(idTd.innerText.trim());
+          }
+        });
+        
+        const available = allStudents.filter(s => !enrolledIds.has(s.STU_ID));
+        select.innerHTML = '<option value="">請選擇要加入的學生...</option>';
+        available.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.STU_ID;
+          opt.textContent = `[${s.CLASS_NAME}] 座號 ${s.SEAT_NUM || ''} - ${s.STU_NAME} (${s.STU_ID})`;
+          select.appendChild(opt);
+        });
+        
+        if (available.length === 0) {
+          select.innerHTML = '<option value="">所有學生皆已修讀此課程</option>';
+        }
+      } catch (err) {
+        select.innerHTML = '<option value="">載入學生名單失敗</option>';
+      }
+    }
+
+    async function enrollStudentToCourse() {
+      const select = document.getElementById('enroll-student-select');
+      const stuId = select.value;
+      if (!stuId) {
+        alert('請選擇要加入的學生！');
+        return;
+      }
+      
+      const btn = document.querySelector('#tab-roster button.action-btn-solid');
+      const origText = btn.innerText;
+      btn.disabled = true;
+      btn.innerText = '加入中...';
+      
+      try {
+        const res = await fetch(`${baseUrl}/course/${currentCourseId}/enrollments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ STU_ID: stuId })
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || '加入失敗');
+        }
+        alert('🎉 成功將學生加入此課程！');
+        fetchCourseData(currentCourseId, 'roster');
+        fetchCourseData(currentCourseId, 'scores');
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = origText;
+      }
+    }
+
+    async function removeStudentFromCourse(stuId, stuName) {
+      if (!confirm(`確定要將學生【${stuName} (${stuId})】從此課程移除嗎？\n\n⚠️ 注意：這將會同步刪除該學生在此課程的成績與所有作品集資料！`)) {
+        return;
+      }
+      if (!confirm(`⚠️ 警告：此操作無法復原。確定要繼續嗎？`)) {
+        return;
+      }
+      
+      try {
+        const res = await fetch(`${baseUrl}/course/${currentCourseId}/enrollments/${stuId}`, {
+          method: 'DELETE'
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || '移除失敗');
+        }
+        alert('🎉 已成功將學生從課程中移除。');
+        fetchCourseData(currentCourseId, 'roster');
+        fetchCourseData(currentCourseId, 'scores');
+        fetchCourseData(currentCourseId, 'portfolios');
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    /* === 學生作品增刪邏輯與下拉選單加載 === */
+    function togglePortfolioForm(show) {
+      const card = document.getElementById('add-portfolio-card');
+      if (show) {
+        card.style.display = 'block';
+        loadPortfolioSelectors();
+      } else {
+        card.style.display = 'none';
+        document.getElementById('portfolio-title-input').value = '';
+        document.getElementById('portfolio-url-input').value = '';
+      }
+    }
+
+    async function loadPortfolioSelectors() {
+      const stuSelect = document.getElementById('portfolio-student-select');
+      stuSelect.innerHTML = '<option value="">載入學生名單中...</option>';
+      
+      const rosterRows = document.querySelectorAll('#roster-tbody tr');
+      let studentCount = 0;
+      stuSelect.innerHTML = '<option value="">請選擇學生...</option>';
+      
+      rosterRows.forEach(row => {
+        const idTd = row.querySelector('td:first-child');
+        const nameTd = row.querySelector('td:nth-child(4)');
+        if (idTd && nameTd && idTd.innerText && idTd.innerText !== '載入中...' && idTd.innerText !== '目前沒有資料') {
+          const id = idTd.innerText.trim();
+          const name = nameTd.innerText.trim();
+          const classText = row.querySelector('td:nth-child(2)').innerText.trim();
+          const seatText = row.querySelector('td:nth-child(3)').innerText.trim();
+          const opt = document.createElement('option');
+          opt.value = id;
+          opt.textContent = `[${classText}] 座號 ${seatText} - ${name} (${id})`;
+          stuSelect.appendChild(opt);
+          studentCount++;
+        }
+      });
+      if (studentCount === 0) {
+        stuSelect.innerHTML = '<option value="">(無修課學生)</option>';
+      }
+
+      const astSelect = document.getElementById('portfolio-assessment-select');
+      astSelect.innerHTML = '<option value="">載入評量中...</option>';
+      try {
+        const res = await fetch(`${baseUrl}/course/${currentCourseId}/assessments`);
+        if (!res.ok) throw new Error();
+        const assessments = await res.json();
+        astSelect.innerHTML = '<option value="">請選擇評量項目...</option>';
+        assessments.forEach(ast => {
+          const opt = document.createElement('option');
+          opt.value = ast.AST_ID;
+          opt.textContent = `${ast.AST_NAME} (${ast.AST_ID})`;
+          astSelect.appendChild(opt);
+        });
+        if (assessments.length === 0) {
+          astSelect.innerHTML = '<option value="">(無評量項目)</option>';
+        }
+      } catch (err) {
+        astSelect.innerHTML = '<option value="">載入評量失敗</option>';
+      }
+    }
+
+    async function addPortfolioSubmit() {
+      const stuId = document.getElementById('portfolio-student-select').value;
+      const astId = document.getElementById('portfolio-assessment-select').value;
+      const title = document.getElementById('portfolio-title-input').value.trim();
+      const fileUrl = document.getElementById('portfolio-url-input').value.trim();
+      
+      if (!stuId) { alert('請選擇學生！'); return; }
+      if (!astId) { alert('請選擇評量項目！'); return; }
+      if (!title) { alert('請輸入作品標題！'); return; }
+      
+      const submitBtn = document.querySelector('#add-portfolio-card button.action-btn-solid');
+      const origText = submitBtn.innerText;
+      submitBtn.disabled = true;
+      submitBtn.innerText = '儲存中...';
+      
+      try {
+        const res = await fetch(`${baseUrl}/course/${currentCourseId}/portfolios`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            STU_ID: stuId,
+            AST_ID: astId,
+            TITLE: title,
+            FILE_URL: fileUrl
+          })
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || '儲存失敗');
+        }
+        alert('🎉 作品新增成功！');
+        togglePortfolioForm(false);
+        fetchCourseData(currentCourseId, 'portfolios');
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = origText;
+      }
+    }
+
+    async function deletePortfolioItem(portfoId) {
+      if (!confirm('確定要刪除此作品資料嗎？')) return;
+      try {
+        const res = await fetch(`${baseUrl}/course/${currentCourseId}/portfolios/${portfoId}`, {
+          method: 'DELETE'
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || '刪除失敗');
+        }
+        alert('🎉 作品已刪除。');
+        fetchCourseData(currentCourseId, 'portfolios');
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
     
     window.onload = () => { fetch(`${baseUrl}/`).catch(err => console.log("Render server warming up...")); fetchStudentsFromAPI(); fetchCoursesFromAPI(); };
     
